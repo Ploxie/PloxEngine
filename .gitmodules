@@ -1,0 +1,19 @@
+[submodule "glm"]
+	path = PloxEngine/vendors/glm
+	url = git@github.com:g-truc/glm.git
+	branch = master
+
+[submodule "EASTL"]
+	path = PloxEngine/vendors/EASTL
+	url = git@github.com:electronicarts/EASTL.git
+	branch = master
+
+[submodule "glfw"]
+	path = PloxEngine/vendors/glfw
+	url = git@github.com:glfw/glfw.git
+	branch = master
+
+[submodule "spdlog"]
+	path = PloxEngine/vendors/spdlog
+	url = git@github.com:gabime/spdlog.git
+	branch = master
