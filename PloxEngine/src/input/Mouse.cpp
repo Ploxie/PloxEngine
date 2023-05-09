@@ -11,7 +11,7 @@ void Mouse::Update()
     m_scrollOffset = {};
 }
 
-bool Mouse::IsButtonDown(Button button) const
+bool Mouse::IsButtonDown(MouseButton button) const
 {
     return m_buttons[static_cast<size_t>(button)];
 }
@@ -48,7 +48,7 @@ void Mouse::OnScroll(double xOffset, double yOffset)
     m_scrollOffset.y += static_cast<float>(yOffset);
 }
 
-void Mouse::OnButton(Button button, InputAction action)
+void Mouse::OnButton(MouseButton button, InputAction action)
 {
     if(action == InputAction::RELEASE)
     {

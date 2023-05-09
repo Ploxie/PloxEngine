@@ -4,6 +4,7 @@
 #include "Engine.h"
 #include "GameLogic.h"
 #include "Logger.h"
+#include "platform/Platform.h"
 
 void* __cdecl operator new[](size_t size,
 							 const char* /*name*/,
@@ -27,31 +28,50 @@ void* __cdecl operator new[](size_t size,
 	return new uint8_t[size];
 }
 
-Engine* Engine::s_instance = nullptr;
-EventManager* Engine::EventManager = nullptr;
-Input* Engine::Input = nullptr;
+Engine Engine::s_instance;
 
-int Engine::Start(int  /*argc*/, char*  /*argv*/[], GameLogic* gameLogic) noexcept
+int Engine::Start(int argc, char* argv[], GameLogic* gameLogic) noexcept
 {
-	s_instance = this;
+	s_instance.Initialize(argc, argv, gameLogic);
+	while(s_instance.Run());
+	s_instance.Shutdown();
+	return 0;
+}
 
-	EventManager = &m_eventManager;
-	Input = &m_input;
+Window* Engine::GetWindow()
+{
+	WindowHandle window = Platform::GetActiveWindow();
+	if(window == NULL_WINDOW_HANDLE)
+	{
+		return nullptr;
+	}
+
+	return Platform::GetWindow(window);
+}
+
+void Engine::Initialize(int argc, char* argv[], GameLogic* gameLogic)
+{
+	m_gameLogic = gameLogic;
 
 	Logger::Initialize();
+	Platform::Initialize("PloxieApplication");
 
-	m_gameLogic = gameLogic;
-	Window window(800, 600, Window::WindowMode::WINDOWED, "PloxEngine");
-	m_window = &window;
+	m_window = Platform::CreateWindow("TestWindow", 50, 50, 800, 600);
 
 	m_gameLogic->Initialize(this);
 
-	while(!m_window->ShouldClose())
-	{
-		m_window->PollEvents();
-		m_gameLogic->Update(0.0F);
-	}
-
-	m_gameLogic->Shutdown();
-	return 0;
+	m_isRunning = true;
 }
+bool Engine::Run()
+{
+	m_isRunning = Platform::PumpMessages();
+
+	m_gameLogic->Update(0.0F);
+
+	return m_isRunning;
+}
+void Engine::Shutdown()
+{
+	m_gameLogic->Shutdown();
+}
+

@@ -6,19 +6,21 @@
 #include <cstdint>
 #include "eastl/vector.h"
 
+using Handle = uint32_t;
+
 class HandleManager
 {
 public:
-	explicit HandleManager(uint32_t maxHandle = UINT32_MAX) noexcept;
+	explicit HandleManager(Handle maxHandle = UINT32_MAX) noexcept;
 
-	uint32_t Allocate(bool transient = false) noexcept;
-	void Free(uint32_t handle) noexcept;
+	Handle Allocate(bool transient = false) noexcept;
+	void Free(Handle handle) noexcept;
 	void FreeTransientHandles() noexcept;
-	bool IsValidHandle(uint32_t handle) const noexcept;
+	bool IsValidHandle(Handle handle) const noexcept;
 
 private:
-	eastl::vector<uint32_t> m_freeHandles;
-	eastl::vector<uint32_t> m_transientHandles;
-	uint32_t m_nextFreeHandle = 1;
-	uint32_t m_maxHandle = UINT32_MAX;
+	eastl::vector<Handle> m_freeHandles;
+	eastl::vector<Handle> m_transientHandles;
+	Handle m_nextFreeHandle = 1;
+	Handle m_maxHandle = UINT32_MAX;
 };

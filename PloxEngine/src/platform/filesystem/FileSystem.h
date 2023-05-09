@@ -23,7 +23,7 @@ enum class FileMode
 	APPEND_OR_CREATE_READ_WRITE,
 };
 
-class FileSystem
+class IFileSystem
 {
 public:
 	virtual bool Exists(const Path& path) const = 0;
@@ -34,8 +34,7 @@ public:
 	virtual bool Remove(const Path& path) const = 0;
 	virtual FileHandle Open(const Path& path, FileMode mode, bool binary) noexcept = 0;
 	virtual uint64_t Read(FileHandle fileHandle, size_t bufferSize, void* buffer) const noexcept = 0;
-	virtual bool
-	ReadFile(const Path& path, size_t bufferSize, void* buffer, bool binary) noexcept = 0;
+	virtual bool ReadFile(const Path& path, size_t bufferSize, void* buffer, bool binary) noexcept = 0;
 	virtual uint64_t Write(FileHandle fileHandle, size_t bufferSize, const void* buffer) const noexcept = 0;
 	virtual bool WriteFile(const Path& path,
 						   size_t bufferSize,
@@ -43,6 +42,14 @@ public:
 						   bool binary) noexcept = 0;
 	virtual void Close(FileHandle fileHandle) noexcept = 0;
 	virtual uint64_t Size(const Path& path) const = 0;
+
+protected:
+
+};
+
+class FileSystem : public IFileSystem
+{
+public:
 
 protected:
 	struct OpenFile

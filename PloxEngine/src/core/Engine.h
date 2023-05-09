@@ -4,30 +4,29 @@
 
 #pragma once
 #include "Event.h"
-#include "input/Input.h"
-#include "window/Window.h"
+#include "eastl/vector.h"
+#include "platform/window/window.h"
 
 class GameLogic;
 
 class Engine
 {
 public:
-	int Start(int argc, char* argv[], GameLogic* gameLogic) noexcept;
+	static int Start(int argc, char* argv[], GameLogic* gameLogic) noexcept;
 
-	inline static Window* GetWindow()
-	{
-		return s_instance->m_window;
-	}
+	static Window* GetWindow();
+private:
 
-public:
-	static EventManager* EventManager;
-	static Input* Input;
+	void Initialize(int argc, char* argv[], GameLogic* gameLogic);
+	bool Run();
+	void Shutdown();
 
 private:
-	static Engine* s_instance;
+	static Engine s_instance;
 
+private:
+	bool m_isRunning;
 	GameLogic* m_gameLogic = nullptr;
-	Window* m_window = nullptr;
-	class EventManager m_eventManager;
-	class Input m_input;
+	EventManager m_eventManager;
+	WindowHandle m_window;
 };

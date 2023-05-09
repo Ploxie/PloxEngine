@@ -8,23 +8,25 @@
 
 enum class InputAction;
 
+enum class MouseButton
+{
+	BUTTON_LEFT = 0,
+	BUTTON_RIGHT = 1,
+	BUTTON_MIDDLE = 2,
+	BUTTON_4 = 3,
+	BUTTON_5 = 5
+};
+
 class Mouse
 {
 public:
-	enum class Button
-	{
-		BUTTON_LEFT = 0,
-		BUTTON_RIGHT = 1,
-		BUTTON_MIDDLE = 2,
-		BUTTON_4 = 3,
-		BUTTON_5 = 5
-	};
+
 
 	explicit Mouse() = default;
 
 	void Update();
 
-	bool IsButtonDown(Button button) const;
+	bool IsButtonDown(MouseButton button) const;
 	glm::vec2 GetPosition() const;
 	glm::vec2 GetDeltaPosition() const;
 	glm::vec2 GetScrollOffset() const;
@@ -34,7 +36,7 @@ public:
 public: // Internal
 	void OnMove(double x, double y);
 	void OnScroll(double xOffset, double yOffset);
-	void OnButton(Button button, InputAction action);
+	void OnButton(MouseButton button, InputAction action);
 
 private:
 	glm::vec2 m_scrollOffset;

@@ -3,12 +3,11 @@
 //
 
 #include "core/Engine.h"
-#include "core/logger.h"
-#include "eastl/vector.h"
-#include "eastl/string.h"
 #include "core/gamelogic.h"
+#include "core/logger.h"
+#include "eastl/string.h"
+#include "eastl/vector.h"
 #include "platform/platform.h"
-#include "platform/filesystem/Filesystem.h"
 
 class Game : public GameLogic
 {
@@ -17,18 +16,14 @@ public:
     {
 
 
-		Path path("W:/Test/Test2/test.txt");
-
-		LOG_INFO("Path: {0}", path.GetParentPath());
-		LOG_INFO("File size: {0}", Platform::FileSystem->Size("W:/Test/asd.txt"));
-
         LOG_INFO("Game Initialized");
     }
     void Update(float deltaTime) noexcept override
     {
-        if(Engine::Input->IsKeyDown(Key::U, true))
+		static int i;
+        if(Input::IsKeyDown(Key::U, true))
         {
-            LOG_TRACE("ASD");
+           LOG_TRACE("{0}", i++);
         }
     }
     void Shutdown() noexcept override

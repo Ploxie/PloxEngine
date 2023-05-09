@@ -6,12 +6,12 @@
 #include <algorithm>
 #include <cassert>
 
-HandleManager::HandleManager(uint32_t maxHandle) noexcept : m_maxHandle(maxHandle)
+HandleManager::HandleManager(Handle maxHandle) noexcept : m_maxHandle(maxHandle)
 { }
 
-uint32_t HandleManager::Allocate(bool transient) noexcept
+Handle HandleManager::Allocate(bool transient) noexcept
 {
-	uint32_t result = 0;
+	Handle result = 0;
 	if(!m_freeHandles.empty())
 	{
 		result = m_freeHandles.back();
@@ -29,7 +29,7 @@ uint32_t HandleManager::Allocate(bool transient) noexcept
 	return result;
 }
 
-void HandleManager::Free(uint32_t handle) noexcept
+void HandleManager::Free(Handle handle) noexcept
 {
 	if(handle != 0)
 	{
@@ -47,7 +47,7 @@ void HandleManager::FreeTransientHandles() noexcept
 	}
 }
 
-bool HandleManager::IsValidHandle(uint32_t handle) const noexcept
+bool HandleManager::IsValidHandle(Handle handle) const noexcept
 {
 	if(handle == 0)
 	{
