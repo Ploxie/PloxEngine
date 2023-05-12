@@ -1,7 +1,6 @@
 //
 // Created by Ploxie on 2023-03-22.
 //
-#pragma once
 #include "Keyboard.h"
 #include "Input.h"
 

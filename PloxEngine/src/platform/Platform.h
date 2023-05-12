@@ -7,7 +7,8 @@
 #include <cstdint>
 #include "window/window.h"
 #include "eastl/vector.h"
-#undef CreateWindow
+
+
 
 class PlatformFileSystem : public FileSystem
 {
@@ -37,7 +38,9 @@ class Platform
 public:
 
 	static bool Initialize(const char* applicationName);
-	static WindowHandle CreateWindow(const char* title, unsigned int x, unsigned int y, unsigned int width, unsigned int height);
+	static WindowHandle CreatePlatformWindow(const char* title, unsigned int x, unsigned int y, unsigned int width, unsigned int height);
+
+	static void* GetApplicationInstance();
 
 	static Window* GetWindow(WindowHandle handle);
 	static Window* GetWindow(void* rawHandle);

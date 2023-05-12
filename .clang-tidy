@@ -37,27 +37,32 @@ Checks: >
   -google-runtime-int,
   -google-runtime-references,
   -misc-non-private-member-variables-in-classes,
+  -misc-unused-parameters,
   -readability-named-parameter,
   -readability-braces-around-statements,
-  -readability-magic-numbers
+  -readability-magic-numbers,
+  -readability-function-cognitive-complexity,
+  -readability-implicit-bool-conversion,
+  -readability-uppercase-literal-suffix,
+  -misc-no-recursion
 # Turn all the warnings from the checks above into errors.
 WarningsAsErrors: "*"
 
 CheckOptions:
   - { key: readability-identifier-naming.NamespaceCase,          value: upper_case }
-  - { key: readability-identifier-naming.ClassCase,              value: CamelCase  }
-  - { key: readability-identifier-naming.StructCase,             value: CamelCase  }
-  - { key: readability-identifier-naming.TemplateParameterCase,  value: CamelCase  }
-  - { key: readability-identifier-naming.FunctionCase,           value: CamelCase  }
+  - { key: readability-identifier-naming.ClassCase,              value: CamelCase }
+  - { key: readability-identifier-naming.StructCase,             value: CamelCase }
+  - { key: readability-identifier-naming.TemplateParameterCase,  value: CamelCase }
+  - { key: readability-identifier-naming.FunctionCase,           value: CamelCase }
   - { key: readability-identifier-naming.VariableCase,           value: camelCase }
-  - { key: readability-identifier-naming.PrivateMemberPrefix,    value: m_         }
-  - { key: readability-identifier-naming.ProtectedMemberPrefix,  value: m_         }
+  - { key: readability-identifier-naming.PrivateMemberPrefix,    value: m_ }
+  - { key: readability-identifier-naming.ProtectedMemberPrefix,  value: m_ }
   - { key: readability-identifier-naming.MacroDefinitionCase,    value: UPPER_CASE }
   - { key: readability-identifier-naming.EnumConstantCase,         value: UPPER_CASE }
   - { key: readability-identifier-naming.ConstexprVariableCase,    value: UPPER_CASE }
   - { key: readability-identifier-naming.GlobalConstantCase,       value: CamelCase }
-  - { key: readability-identifier-naming.GlobalConstantPrefix,     value: k         }
+  - { key: readability-identifier-naming.GlobalConstantPrefix,     value: k }
   - { key: readability-identifier-naming.MemberConstantCase,       value: CamelCase }
-  - { key: readability-identifier-naming.MemberConstantPrefix,     value: k         }
+  - { key: readability-identifier-naming.MemberConstantPrefix,     value: k }
   - { key: readability-identifier-naming.StaticConstantCase,       value: CamelCase }
-  - { key: readability-identifier-naming.StaticConstantPrefix,     value: s         }
+  - { key: readability-identifier-naming.StaticConstantPrefix,     value: s }

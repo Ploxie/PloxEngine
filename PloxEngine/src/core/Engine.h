@@ -6,6 +6,7 @@
 #include "Event.h"
 #include "eastl/vector.h"
 #include "platform/window/window.h"
+#include "rendering/renderer.h"
 
 class GameLogic;
 
@@ -29,4 +30,5 @@ private:
 	GameLogic* m_gameLogic = nullptr;
 	EventManager m_eventManager;
 	WindowHandle m_window;
+	Renderer m_renderer;
 };

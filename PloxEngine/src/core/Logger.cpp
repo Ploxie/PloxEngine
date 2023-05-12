@@ -7,6 +7,11 @@
 logger Logger::m_coreLogger;
 logger Logger::m_clientLogger;
 
+void ReportAssertionFailure(const char* expression, const char* message, const char* file, unsigned int line)
+{
+	LOG_CRITICAL("Assertion Failure: {0}, message: '{1}', in file: {2}, line {3}",expression, message, file, line);
+}
+
 void Logger::Initialize()
 {
     spdlog::set_pattern("%^[%T][%n]: %v%$");
