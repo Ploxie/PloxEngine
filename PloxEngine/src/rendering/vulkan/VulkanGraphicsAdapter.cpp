@@ -40,12 +40,20 @@ VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer
 	VulkanInstanceProperties instanceProperties;
 	instanceProperties.AddExtension(VK_KHR_SURFACE_EXTENSION_NAME);
 	instanceProperties.AddExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-	instanceProperties.AddExtension("VK_KHR_get_physical_device_properties2");
-	instanceProperties.AddExtension(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
+	instanceProperties.AddExtension(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+	instanceProperties.AddLayer("VK_LAYER_KHRONOS_validation");
 	Vulkan::AddPlatformInstanceExtensions(instanceProperties);
+
+	const VkValidationFeatureEnableEXT featuresRequested[] = { VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT, VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT, VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT };
+	VkValidationFeaturesEXT validationFeatures	       = { VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
+	{
+	    validationFeatures.enabledValidationFeatureCount = _countof(featuresRequested);
+	    validationFeatures.pEnabledValidationFeatures    = featuresRequested;
+	}
 
 	VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
 	{
+	    createInfo.pNext		       = &validationFeatures;
 	    createInfo.pApplicationInfo	       = &appInfo;
 	    createInfo.enabledLayerCount       = static_cast<unsigned int>(instanceProperties.GetLayers().size());
 	    createInfo.ppEnabledLayerNames     = instanceProperties.GetLayers().data();
@@ -97,6 +105,7 @@ VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer
 	requiredFeatures.imageCubeArray			      = VK_TRUE;
 	requiredFeatures.geometryShader			      = VK_TRUE;
     }
+
     VkPhysicalDeviceVulkan12Features requiredVulkan12Features = {};
     {
 	requiredVulkan12Features.shaderSampledImageArrayNonUniformIndexing	    = VK_TRUE;
@@ -109,6 +118,7 @@ VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer
 	requiredVulkan12Features.descriptorBindingUpdateUnusedWhilePending	    = VK_TRUE;
 	//requiredVulkan12Features.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE;
     }
+
     VkPhysicalDeviceDynamicRenderingFeatures requiredDynamicRenderingFeatures = {};
     {
 	requiredDynamicRenderingFeatures.dynamicRendering = VK_TRUE;
