@@ -43,9 +43,11 @@ void Vulkan::InitializePlatform(VkInstance instance, VkDevice device)
     s_vulkanInstance = instance;
     s_vulkanDevice   = device;
 
-    s_acquireFullscreenExclusiveMode = reinterpret_cast<PFN_vkAcquireFullScreenExclusiveModeEXT>(vkGetInstanceProcAddr(instance, "vkAcquireFullScreenExclusiveModeEXT"));
+    auto func = reinterpret_cast<PFN_vkGetDeviceProcAddr>(vkGetInstanceProcAddr(instance, "vkGetDeviceProcAddr"));
+
+    s_acquireFullscreenExclusiveMode = reinterpret_cast<PFN_vkAcquireFullScreenExclusiveModeEXT>(func(device, "vkAcquireFullScreenExclusiveModeEXT"));
     ASSERT(s_acquireFullscreenExclusiveMode);
-    s_releaseFullscreenExclusiveMode = reinterpret_cast<PFN_vkReleaseFullScreenExclusiveModeEXT>(vkGetInstanceProcAddr(instance, "vkReleaseFullScreenExclusiveModeEXT"));
+    s_releaseFullscreenExclusiveMode = reinterpret_cast<PFN_vkReleaseFullScreenExclusiveModeEXT>(func(device, "vkReleaseFullScreenExclusiveModeEXT"));
     ASSERT(s_releaseFullscreenExclusiveMode);
 }
 

@@ -56,6 +56,7 @@ Window::MouseCursor Window::GetMouseCursor()
 void Window::SetWindowMode(WindowMode mode)
 {
     m_mode = mode;
+    Engine::GetRenderer().ActivateFullscreen(this);
 }
 
 WindowMode Window::GetWindowMode()

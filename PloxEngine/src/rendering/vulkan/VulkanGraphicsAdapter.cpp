@@ -16,10 +16,20 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* pUserData)
 {
-    LOG_CORE_ERROR("Vulkan Validation Layer:");
-    LOG_CORE_ERROR("\tMessage ID Name: {0}", pCallbackData->pMessageIdName);
-    LOG_CORE_ERROR("\tMessage ID Number: {0}", pCallbackData->messageIdNumber);
-    LOG_CORE_ERROR("\tMessage: {0}", pCallbackData->pMessage);
+    spdlog::level::level_enum severity = spdlog::level::info;
+    if((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+    {
+	severity = spdlog::level::warn;
+    }
+    else if((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+    {
+	severity = spdlog::level::err;
+    }
+    
+    Logger::GetCoreLogger()->log(severity, "Vulkan Validation Layer:");
+    Logger::GetCoreLogger()->log(severity, "\tMessage ID Name: {0}", pCallbackData->pMessageIdName);
+    Logger::GetCoreLogger()->log(severity, "\tMessage ID Number: {0}", pCallbackData->messageIdNumber);
+    Logger::GetCoreLogger()->log(severity, "\tMessage: {0}", pCallbackData->pMessage);
 
     return VK_FALSE;
 }
