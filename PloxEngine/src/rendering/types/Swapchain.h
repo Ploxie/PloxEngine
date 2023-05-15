@@ -9,6 +9,8 @@
 #include "Queue.h"
 #include "Semaphore.h"
 
+class Window;
+
 enum class PresentMode
 {
     IMMEDIATE,
@@ -18,15 +20,16 @@ enum class PresentMode
 class Swapchain
 {
 public:
-    virtual ~Swapchain()									   = default;
-    virtual void* GetNativeHandle() const							   = 0;
-    virtual void Resize(uint32_t width, uint32_t height, bool fullscreen, PresentMode presentMode) = 0;
-    virtual unsigned int GetCurrentImageIndex()							   = 0;
+    virtual ~Swapchain()									  = default;
+    virtual void* GetNativeHandle() const							  = 0;
+    virtual void Resize(uint32_t width, uint32_t height, Window* window, PresentMode presentMode) = 0;
+    virtual unsigned int GetCurrentImageIndex()							  = 0;
     virtual void Present(Semaphore* waitSemaphore, uint64_t semaphoreWaitValue, Semaphore* signalSemaphore,
-			 uint64_t semaphoreSignalValue)						   = 0;
-    virtual Extent2D GetExtent() const								   = 0;
-    virtual Extent2D GetRecreationExtent() const						   = 0;
-    virtual Format GetImageFormat() const							   = 0;
-    virtual Image* GetImage(uint32_t index) const						   = 0;
-    virtual Queue* GetPresentQueue() const							   = 0;
+			 uint64_t semaphoreSignalValue)						  = 0;
+    virtual Extent2D GetExtent() const								  = 0;
+    virtual Extent2D GetRecreationExtent() const						  = 0;
+    virtual Format GetImageFormat() const							  = 0;
+    virtual Image* GetImage(uint32_t index) const						  = 0;
+    virtual Queue* GetPresentQueue() const							  = 0;
+    virtual PresentMode GetPresentMode() const							  = 0;
 };

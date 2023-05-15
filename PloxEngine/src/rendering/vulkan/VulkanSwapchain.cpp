@@ -5,16 +5,18 @@
 #include "core/Assert.h"
 #include "core/Logger.h"
 #include "eastl/vector.h"
+#include "platform/window/Window.h"
+#include "VulkanGraphicsAdapter.h"
 #include "VulkanUtilities.h"
 
 VulkanSwapchain::VulkanSwapchain(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface,
-				 Queue* presentQueue, uint32_t width, uint32_t height, bool fullscreen,
+				 Queue* presentQueue, uint32_t width, uint32_t height, Window* window,
 				 PresentMode presentMode)
     : m_physicalDevice(physicalDevice),
       m_device(device),
       m_surface(surface),
       m_presentQueue(presentQueue),
-      m_fullscreen(fullscreen),
+      m_window(window),
       m_presentMode(presentMode)
 {
     Create(width, height);
@@ -30,9 +32,9 @@ void* VulkanSwapchain::GetNativeHandle() const
     return m_swapchain;
 }
 
-void VulkanSwapchain::Resize(uint32_t width, uint32_t height, bool fullscreen, PresentMode presentMode)
+void VulkanSwapchain::Resize(uint32_t width, uint32_t height, Window* window, PresentMode presentMode)
 {
-    m_fullscreen  = fullscreen;
+    m_window	  = window;
     m_presentMode = presentMode;
     Resize(width, height, true);
 }
@@ -161,6 +163,11 @@ Queue* VulkanSwapchain::GetPresentQueue() const
     return m_presentQueue;
 }
 
+PresentMode VulkanSwapchain::GetPresentMode() const
+{
+    return m_presentMode;
+}
+
 void VulkanSwapchain::Create(uint32_t width, uint32_t height)
 {
     VkSurfaceCapabilitiesKHR surfaceCapabilities;
@@ -247,6 +254,7 @@ void VulkanSwapchain::Create(uint32_t width, uint32_t height)
 	createInfo.presentMode	    = presentMode;
 	createInfo.clipped	    = VK_TRUE;
     }
+    Vulkan::AddSwapchainWindowInfo(createInfo, m_window);
 
     // Create swapchain
     {
@@ -263,6 +271,8 @@ void VulkanSwapchain::Create(uint32_t width, uint32_t height)
 	    return;
 	}
     }
+
+    Vulkan::ActivateFullscreen(m_window, this);
 
     // Create images
     VkImage imagesVk[MAX_IMAGE_COUNT];

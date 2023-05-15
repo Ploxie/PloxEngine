@@ -4,6 +4,8 @@
 #include "VulkanGraphicsAdapter.h"
 #include "core/assert.h"
 #include "core/logger.h"
+#include "platform/window/Window.h"
+#include "VulkanDeviceInfo.h"
 #include "VulkanSwapchain.h"
 
 #undef CreateSemaphore
@@ -15,20 +17,15 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     void* pUserData)
 {
     LOG_CORE_ERROR("Vulkan Validation Layer:");
-    LOG_CORE_ERROR("Message ID Name: {0}", pCallbackData->pMessageIdName);
-    LOG_CORE_ERROR("Message ID Number: {0}", pCallbackData->messageIdNumber);
-    LOG_CORE_ERROR("Message: {0}", pCallbackData->pMessage);
+    LOG_CORE_ERROR("\tMessage ID Name: {0}", pCallbackData->pMessageIdName);
+    LOG_CORE_ERROR("\tMessage ID Number: {0}", pCallbackData->messageIdNumber);
+    LOG_CORE_ERROR("\tMessage: {0}", pCallbackData->pMessage);
 
     return VK_FALSE;
 }
 
 VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer)
 {
-    eastl::vector<const char*> requiredInstanceExtensions;
-    Vulkan::AppendPlatformExtensions(requiredInstanceExtensions);
-    requiredInstanceExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-    requiredInstanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-
     // Create Vulkan Instance
     {
 	VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
@@ -40,44 +37,25 @@ VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer
 	    appInfo.apiVersion	       = VK_API_VERSION_1_3;
 	}
 
-	// Validate required extensions
-	{
-	    unsigned int instanceExtensionCount = 0;
-	    vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, nullptr);
-	    eastl::vector<VkExtensionProperties> instanceExtensions(instanceExtensionCount);
-	    vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, instanceExtensions.data());
-
-	    for(auto& requiredInstanceExtension: requiredInstanceExtensions)
-	    {
-		bool found = false;
-		for(auto& instanceExtension: instanceExtensions)
-		{
-		    if(strcmp(requiredInstanceExtension, instanceExtension.extensionName) == 0)
-		    {
-			found = true;
-			break;
-		    }
-		}
-
-		if(!found)
-		{
-		    LOG_CRITICAL("Required extension not found: {0}", requiredInstanceExtension);
-		}
-	    }
-	}
+	VulkanInstanceProperties instanceProperties;
+	instanceProperties.AddExtension(VK_KHR_SURFACE_EXTENSION_NAME);
+	instanceProperties.AddExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+	instanceProperties.AddExtension("VK_KHR_get_physical_device_properties2");
+	instanceProperties.AddExtension(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
+	Vulkan::AddPlatformInstanceExtensions(instanceProperties);
 
 	VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
 	{
 	    createInfo.pApplicationInfo	       = &appInfo;
-	    createInfo.enabledLayerCount       = 0;
-	    createInfo.ppEnabledLayerNames     = nullptr;
-	    createInfo.enabledExtensionCount   = static_cast<unsigned int>(requiredInstanceExtensions.size());
-	    createInfo.ppEnabledExtensionNames = requiredInstanceExtensions.data();
+	    createInfo.enabledLayerCount       = static_cast<unsigned int>(instanceProperties.GetLayers().size());
+	    createInfo.ppEnabledLayerNames     = instanceProperties.GetLayers().data();
+	    createInfo.enabledExtensionCount   = static_cast<unsigned int>(instanceProperties.GetExtensions().size());
+	    createInfo.ppEnabledExtensionNames = instanceProperties.GetExtensions().data();
 	}
 
 	if(vkCreateInstance(&createInfo, nullptr, &m_instance) != VK_SUCCESS)
 	{
-	    LOG_CRITICAL("Failed to create Vulkan Instance!");
+	    LOG_CORE_CRITICAL("Failed to create Vulkan Instance!");
 	    return;
 	}
     }
@@ -94,7 +72,7 @@ VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer
 	auto func = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(m_instance, "vkCreateDebugUtilsMessengerEXT"));
 	if(func(m_instance, &createInfo, nullptr, &m_debugUtilsMessenger) != VK_SUCCESS)
 	{
-	    LOG_CRITICAL("Failed to set up Vulkan debug callback");
+	    LOG_CORE_CRITICAL("Failed to set up Vulkan debug callback");
 	    return;
 	}
     }
@@ -103,352 +81,265 @@ VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer
     {
 	if(Vulkan::CreateWindowSurface(windowHandle, m_instance, &m_surface) != VK_SUCCESS)
 	{
-	    LOG_CRITICAL("Failed to create window surface");
+	    LOG_CORE_CRITICAL("Failed to create window surface");
 	    return;
 	}
     }
 
-    const char* const requiredDeviceExtensions[] = {
-	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-	VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME,
-    };
-    constexpr size_t REQUIRED_DEVICE_EXTENSION_COUNT = 2;
-    bool supportsMemoryBudgetExtension		     = false;
+    VkPhysicalDeviceFeatures requiredFeatures = {};
+    {
+	requiredFeatures.samplerAnisotropy		      = VK_TRUE;
+	requiredFeatures.textureCompressionBC		      = VK_TRUE;
+	requiredFeatures.fragmentStoresAndAtomics	      = VK_TRUE;
+	requiredFeatures.independentBlend		      = VK_TRUE;
+	requiredFeatures.shaderStorageImageExtendedFormats    = VK_TRUE;
+	requiredFeatures.shaderStorageImageWriteWithoutFormat = VK_TRUE;
+	requiredFeatures.imageCubeArray			      = VK_TRUE;
+	requiredFeatures.geometryShader			      = VK_TRUE;
+    }
+    VkPhysicalDeviceVulkan12Features requiredVulkan12Features = {};
+    {
+	requiredVulkan12Features.shaderSampledImageArrayNonUniformIndexing	    = VK_TRUE;
+	requiredVulkan12Features.timelineSemaphore				    = VK_TRUE;
+	requiredVulkan12Features.imagelessFramebuffer				    = VK_TRUE;
+	requiredVulkan12Features.descriptorBindingPartiallyBound		    = VK_TRUE;
+	requiredVulkan12Features.descriptorBindingSampledImageUpdateAfterBind	    = VK_TRUE;
+	requiredVulkan12Features.descriptorBindingStorageBufferUpdateAfterBind	    = VK_TRUE;
+	requiredVulkan12Features.descriptorBindingUniformTexelBufferUpdateAfterBind = VK_TRUE;
+	requiredVulkan12Features.descriptorBindingUpdateUnusedWhilePending	    = VK_TRUE;
+	//requiredVulkan12Features.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE;
+    }
+    VkPhysicalDeviceDynamicRenderingFeatures requiredDynamicRenderingFeatures = {};
+    {
+	requiredDynamicRenderingFeatures.dynamicRendering = VK_TRUE;
+    }
 
+    VulkanDeviceInfo selectedDevice = {};
     // Choose Physical Device
     {
-	unsigned int physicalDeviceCount = 0;
-	vkEnumeratePhysicalDevices(m_instance, &physicalDeviceCount, nullptr);
-
-	ASSERT_MSG(physicalDeviceCount > 0, "Failed to find device with Vulkan support");
-
-	eastl::vector<VkPhysicalDevice> physicalDevices(physicalDeviceCount);
-	vkEnumeratePhysicalDevices(m_instance, &physicalDeviceCount, physicalDevices.data());
-
-	struct DeviceInfo
+	eastl::vector<VkPhysicalDevice> physicalDevices;
 	{
-	    VkPhysicalDevice physicalDevice;
-	    VkPhysicalDeviceProperties properties;
-	    VkPhysicalDeviceFeatures features;
-	    VkPhysicalDeviceVulkan12Features vulkan12Features;
-	    unsigned int graphicsQueueFamily;
-	    unsigned int computeQueueFamily;
-	    unsigned int transferQueueFamily;
-	    bool computeQueuePresentable;
-	    bool memoryBudgetExtensionSupported;
-	    bool dynamicRenderingExtensionSupported;
-	};
+	    unsigned int physicalDeviceCount = 0;
+	    vkEnumeratePhysicalDevices(m_instance, &physicalDeviceCount, nullptr);
 
-	eastl::vector<DeviceInfo> suitableDevices;
+	    ASSERT_MSG(physicalDeviceCount > 0, "Failed to find device with Vulkan support");
+
+	    physicalDevices.resize(physicalDeviceCount);
+	    vkEnumeratePhysicalDevices(m_instance, &physicalDeviceCount, physicalDevices.data());
+	}
+
+	eastl::vector<VulkanDeviceInfo> suitableDevices;
 
 	for(auto* physicalDevice: physicalDevices)
 	{
-	    int graphicsFamilyIndex	       = -1;
-	    int computeFamilyIndex	       = -1;
-	    int transferFamilyIndex	       = -1;
-	    VkBool32 graphicsFamilyPresentable = VK_FALSE;
-	    VkBool32 computeFamilyPresentable  = VK_FALSE;
+	    VulkanDeviceInfo deviceInfo(physicalDevice, m_surface);
 
-	    // Find queue indices
+	    // Check if required Extensions are supported
 	    {
-		unsigned int queueFamilyCount = 0;
-		vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
-		eastl::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-		vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
-
-		for(int queueFamilyIndex = 0; queueFamilyIndex < queueFamilyCount; queueFamilyIndex++)
+		if(!deviceInfo.AddExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME))
 		{
-		    auto& queueFamily = queueFamilies[queueFamilyIndex];
-		    if(queueFamily.queueCount > 0 && ((queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0))
-		    {
-			graphicsFamilyIndex = queueFamilyIndex;
-		    }
+		    continue;
 		}
 
-		for(int queueFamilyIndex = 0; queueFamilyIndex < queueFamilyCount; queueFamilyIndex++)
+		if(!deviceInfo.AddExtension(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME))
 		{
-		    if(queueFamilyIndex == graphicsFamilyIndex)
-		    {
-			continue;
-		    }
-
-		    auto& queueFamily = queueFamilies[queueFamilyIndex];
-		    if(queueFamily.queueCount > 0 && ((queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT) != 0))
-		    {
-			computeFamilyIndex = queueFamilyIndex;
-		    }
-		}
-
-		for(int queueFamilyIndex = 0; queueFamilyIndex < queueFamilyCount; queueFamilyIndex++)
-		{
-		    if(queueFamilyIndex == graphicsFamilyIndex || queueFamilyIndex == computeFamilyIndex)
-		    {
-			continue;
-		    }
-
-		    auto& queueFamily = queueFamilies[queueFamilyIndex];
-		    if(queueFamily.queueCount > 0 && ((queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) != 0))
-		    {
-			transferFamilyIndex = queueFamilyIndex;
-		    }
-		}
-
-		if(computeFamilyIndex == -1)
-		{
-		    computeFamilyIndex = graphicsFamilyIndex;
-		}
-		if(transferFamilyIndex == -1)
-		{
-		    transferFamilyIndex = graphicsFamilyIndex;
-		}
-
-		vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, graphicsFamilyIndex, m_surface, &graphicsFamilyPresentable);
-		vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, computeFamilyIndex, m_surface, &computeFamilyPresentable);
-	    }
-
-	    bool extensionsSupported		    = false;
-	    bool memoryBudgetExtensionSupported	    = false;
-	    bool dynamicRenderingExtensionSupported = false;
-	    {
-		unsigned int availableExtensionsCount = 0;
-		vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &availableExtensionsCount, nullptr);
-		eastl::vector<VkExtensionProperties> availableExtensions(availableExtensionsCount);
-		vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &availableExtensionsCount, availableExtensions.data());
-
-		bool foundDeviceExtensions[REQUIRED_DEVICE_EXTENSION_COUNT] = {};
-		for(size_t i = 0; i < availableExtensionsCount; i++)
-		{
-		    for(size_t j = 0; j < REQUIRED_DEVICE_EXTENSION_COUNT; j++)
-		    {
-			if(strcmp(availableExtensions[i].extensionName, requiredDeviceExtensions[j]) == 0)
-			{
-			    foundDeviceExtensions[j] = true;
-			}
-		    }
-		    if(strcmp(availableExtensions[i].extensionName, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME) == 0)
-		    {
-			memoryBudgetExtensionSupported = true;
-		    }
-		    else if(strcmp(availableExtensions[i].extensionName, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME) == 0)
-		    {
-			dynamicRenderingExtensionSupported = true;
-		    }
-		}
-
-		extensionsSupported = true;
-		for(auto e: foundDeviceExtensions)
-		{
-		    if(!e)
-		    {
-			extensionsSupported = false;
-			break;
-		    }
+		    continue;
 		}
 	    }
 
-	    bool swapchainAdequate = false;
-	    if(extensionsSupported)
+	    // Check if required Features are supported
 	    {
-		unsigned int formatCount;
+		if(!deviceInfo.HasFeatures(requiredFeatures))
+		{
+		    continue;
+		}
+		if(!deviceInfo.HasFeatures(requiredVulkan12Features))
+		{
+		    continue;
+		}
+		if(!deviceInfo.HasFeatures(requiredDynamicRenderingFeatures))
+		{
+		    continue;
+		}
+	    }
+
+	    // Check if required Queue properties are supported
+	    {
+		if(deviceInfo.GetGraphicsQueueFamilyIndex() < 0 || deviceInfo.GetComputeQueueFamilyIndex() < 0 || deviceInfo.GetTransferQueueFamilyIndex() < 0)
+		{
+		    continue;
+		}
+		if(!deviceInfo.IsGraphicsQueuePresentable())
+		{
+		    continue;
+		}
+	    }
+
+	    // Check if swapchain is adequate
+	    {
+		uint32_t formatCount;
 		vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, m_surface, &formatCount, nullptr);
 
-		unsigned int presentModeCount;
+		uint32_t presentModeCount;
 		vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, m_surface, &presentModeCount, nullptr);
 
-		swapchainAdequate = formatCount != 0 && presentModeCount != 0;
-	    }
-
-	    VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR };
-	    VkPhysicalDeviceVulkan12Features vulkan12Features			 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES, dynamicRenderingExtensionSupported ? &dynamicRenderingFeatures : nullptr };
-	    VkPhysicalDeviceFeatures2 supportedFeatures2			 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, &vulkan12Features };
-
-	    vkGetPhysicalDeviceFeatures2(physicalDevice, &supportedFeatures2);
-
-	    VkPhysicalDeviceFeatures supportedFeatures = supportedFeatures2.features;
-
-	    if(graphicsFamilyIndex >= 0 && computeFamilyIndex >= 0 && transferFamilyIndex >= 0 && graphicsFamilyPresentable
-	       //&& computeFamilyPresentable
-	       && extensionsSupported && swapchainAdequate && supportedFeatures.samplerAnisotropy && supportedFeatures.textureCompressionBC && supportedFeatures.fragmentStoresAndAtomics && supportedFeatures.independentBlend && supportedFeatures.shaderStorageImageExtendedFormats && supportedFeatures.shaderStorageImageWriteWithoutFormat && supportedFeatures.imageCubeArray && supportedFeatures.geometryShader && vulkan12Features.shaderSampledImageArrayNonUniformIndexing && vulkan12Features.timelineSemaphore && vulkan12Features.imagelessFramebuffer && vulkan12Features.descriptorBindingPartiallyBound
-	       //&& vulkan12Features.descriptorBindingUniformBufferUpdateAfterBind
-	       && vulkan12Features.descriptorBindingSampledImageUpdateAfterBind && vulkan12Features.descriptorBindingStorageBufferUpdateAfterBind && vulkan12Features.descriptorBindingUniformTexelBufferUpdateAfterBind && vulkan12Features.descriptorBindingUpdateUnusedWhilePending)
-	    {
-		DeviceInfo deviceInfo = {};
+		if(formatCount == 0 || presentModeCount == 0)
 		{
-		    deviceInfo.physicalDevice = physicalDevice;
-		    vkGetPhysicalDeviceProperties(physicalDevice, &deviceInfo.properties);
-		    deviceInfo.features				  = supportedFeatures;
-		    deviceInfo.vulkan12Features			  = vulkan12Features;
-		    deviceInfo.graphicsQueueFamily		  = graphicsFamilyIndex;
-		    deviceInfo.computeQueueFamily		  = computeFamilyIndex;
-		    deviceInfo.transferQueueFamily		  = transferFamilyIndex;
-		    deviceInfo.computeQueuePresentable		  = computeFamilyPresentable == VK_TRUE;
-		    deviceInfo.memoryBudgetExtensionSupported	  = memoryBudgetExtensionSupported;
-		    deviceInfo.dynamicRenderingExtensionSupported = dynamicRenderingExtensionSupported && dynamicRenderingFeatures.dynamicRendering == VK_TRUE;
-
-		    suitableDevices.push_back(deviceInfo);
+		    continue;
 		}
 	    }
+
+	    suitableDevices.push_back(deviceInfo);
 	}
 
-	LOG_INFO("Found {0} suitable device(s): ", suitableDevices.size());
-
-	size_t deviceIndex = 1;
-
-	if(suitableDevices.empty())
+	// Select suitable Physical Device
 	{
-	    LOG_CRITICAL("Failed to find suitable GPU");
-	    return;
+	    size_t deviceIndex = 1;
+
+	    if(suitableDevices.empty())
+	    {
+		LOG_CORE_CRITICAL("Failed to find suitable GPU");
+		return;
+	    }
+
+	    LOG_CORE_INFO("Found {0} suitable device(s): ", suitableDevices.size());
+
+	    for(size_t i = 0; i < suitableDevices.size(); ++i)
+	    {
+		LOG_CORE_INFO("\t[{0}] {1}", (unsigned) i, suitableDevices[i].GetProperties().deviceName);
+	    }
+
+	    if(suitableDevices.size() == 1)
+	    {
+		deviceIndex = 0;
+	    }
+
+	    selectedDevice = suitableDevices[deviceIndex];
 	}
-	for(size_t i = 0; i < suitableDevices.size(); ++i)
+
+	m_physicalDevice = selectedDevice.GetPhysicalDevice();
+
+	// Populate Queue Info
 	{
-	    LOG_INFO("[{0}] {1}", (unsigned) i, suitableDevices[i].properties.deviceName);
+	    m_graphicsQueue.m_queue		 = VK_NULL_HANDLE;
+	    m_graphicsQueue.m_queueType		 = VulkanQueue::QueueType::GRAPHICS;
+	    m_graphicsQueue.m_timestampValidBits = 0;
+	    m_graphicsQueue.m_timestampPeriod	 = selectedDevice.GetProperties().limits.timestampPeriod;
+	    m_graphicsQueue.m_presentable	 = true;
+	    m_graphicsQueue.m_queueFamily	 = selectedDevice.GetGraphicsQueueFamilyIndex();
+
+	    m_computeQueue.m_queue		= VK_NULL_HANDLE;
+	    m_computeQueue.m_queueType		= VulkanQueue::QueueType::COMPUTE;
+	    m_computeQueue.m_timestampValidBits = 0;
+	    m_computeQueue.m_timestampPeriod	= selectedDevice.GetProperties().limits.timestampPeriod;
+	    m_computeQueue.m_presentable	= selectedDevice.IsComputeQueuePresentable();
+	    m_computeQueue.m_queueFamily	= selectedDevice.GetComputeQueueFamilyIndex();
+
+	    m_transferQueue.m_queue		 = VK_NULL_HANDLE;
+	    m_transferQueue.m_queueType		 = VulkanQueue::QueueType::TRANSFER;
+	    m_transferQueue.m_timestampValidBits = 0;
+	    m_transferQueue.m_timestampPeriod	 = selectedDevice.GetProperties().limits.timestampPeriod;
+	    m_transferQueue.m_presentable	 = false;
+	    m_transferQueue.m_queueFamily	 = selectedDevice.GetTransferQueueFamilyIndex();
 	}
-
-	if(suitableDevices.size() == 1)
-	{
-	    deviceIndex = 0;
-	}
-
-	const auto& selectedDevice = suitableDevices[deviceIndex];
-
-	m_physicalDevice = selectedDevice.physicalDevice;
-
-	m_graphicsQueue.m_queue		     = VK_NULL_HANDLE;
-	m_graphicsQueue.m_queueType	     = VulkanQueue::QueueType::GRAPHICS;
-	m_graphicsQueue.m_timestampValidBits = 0;
-	m_graphicsQueue.m_timestampPeriod    = selectedDevice.properties.limits.timestampPeriod;
-	m_graphicsQueue.m_presentable	     = true;
-	m_graphicsQueue.m_queueFamily	     = selectedDevice.graphicsQueueFamily;
-
-	m_computeQueue.m_queue		    = VK_NULL_HANDLE;
-	m_computeQueue.m_queueType	    = VulkanQueue::QueueType::COMPUTE;
-	m_computeQueue.m_timestampValidBits = 0;
-	m_computeQueue.m_timestampPeriod    = selectedDevice.properties.limits.timestampPeriod;
-	m_computeQueue.m_presentable	    = selectedDevice.computeQueuePresentable;
-	m_computeQueue.m_queueFamily	    = selectedDevice.computeQueueFamily;
-
-	m_transferQueue.m_queue		     = VK_NULL_HANDLE;
-	m_transferQueue.m_queueType	     = VulkanQueue::QueueType::TRANSFER;
-	m_transferQueue.m_timestampValidBits = 0;
-	m_transferQueue.m_timestampPeriod    = selectedDevice.properties.limits.timestampPeriod;
-	m_transferQueue.m_presentable	     = false;
-	m_transferQueue.m_queueFamily	     = selectedDevice.transferQueueFamily;
-
-	m_properties = selectedDevice.properties;
-	m_features   = selectedDevice.features;
-
-	m_dynamicRenderingExtensionSupport = selectedDevice.dynamicRenderingExtensionSupported;
-	supportsMemoryBudgetExtension	   = selectedDevice.memoryBudgetExtensionSupported;
     }
 
     // Create Logical Device
     {
 	unsigned int queueCreateInfoCount = 0;
 	VkDeviceQueueCreateInfo queueCreateInfos[3];
-	unsigned int uniqueQueueFamilies[3];
-	unsigned int uniqueQueueFamilyCount = 0;
-
-	uniqueQueueFamilies[uniqueQueueFamilyCount++] = m_graphicsQueue.GetQueueFamily();
-
-	if(m_computeQueue.GetQueueFamily() != uniqueQueueFamilies[0])
+	// Create Queue Info
 	{
-	    uniqueQueueFamilies[uniqueQueueFamilyCount++] = m_computeQueue.GetQueueFamily();
-	}
-	if(m_transferQueue.GetQueueFamily() != uniqueQueueFamilies[0] && m_transferQueue.GetQueueFamily() != uniqueQueueFamilies[1])
-	{
-	    uniqueQueueFamilies[uniqueQueueFamilyCount++] = m_transferQueue.GetQueueFamily();
-	}
+	    unsigned int uniqueQueueFamilies[3];
+	    unsigned int uniqueQueueFamilyCount = 0;
 
-	float queuePriority = 1.0F;
-	for(size_t i = 0; i < uniqueQueueFamilyCount; i++)
-	{
-	    VkDeviceQueueCreateInfo queueCreateInfo = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
+	    // Find unique Queue Families
 	    {
-		queueCreateInfo.queueFamilyIndex = uniqueQueueFamilies[i];
-		queueCreateInfo.queueCount	 = 1;
-		queueCreateInfo.pQueuePriorities = &queuePriority;
+		uniqueQueueFamilies[uniqueQueueFamilyCount++] = m_graphicsQueue.GetQueueFamily();
+
+		if(m_computeQueue.GetQueueFamily() != uniqueQueueFamilies[0])
+		{
+		    uniqueQueueFamilies[uniqueQueueFamilyCount++] = m_computeQueue.GetQueueFamily();
+		}
+		if(m_transferQueue.GetQueueFamily() != uniqueQueueFamilies[0] && m_transferQueue.GetQueueFamily() != uniqueQueueFamilies[1])
+		{
+		    uniqueQueueFamilies[uniqueQueueFamilyCount++] = m_transferQueue.GetQueueFamily();
+		}
 	    }
-	    queueCreateInfos[queueCreateInfoCount++] = queueCreateInfo;
+
+	    // Create Queue Create Infos
+	    {
+		float queuePriority = 1.0F;
+		for(size_t i = 0; i < uniqueQueueFamilyCount; i++)
+		{
+		    VkDeviceQueueCreateInfo queueCreateInfo = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
+		    {
+			queueCreateInfo.queueFamilyIndex = uniqueQueueFamilies[i];
+			queueCreateInfo.queueCount	 = 1;
+			queueCreateInfo.pQueuePriorities = &queuePriority;
+		    }
+		    queueCreateInfos[queueCreateInfoCount++] = queueCreateInfo;
+		}
+	    }
 	}
 
-	VkPhysicalDeviceFeatures deviceFeatures = {};
+	// Enabled Non-Required Extensions
 	{
-	    deviceFeatures.samplerAnisotropy			= VK_TRUE;
-	    deviceFeatures.textureCompressionBC			= VK_TRUE;
-	    deviceFeatures.independentBlend			= VK_TRUE;
-	    deviceFeatures.fragmentStoresAndAtomics		= VK_TRUE;
-	    deviceFeatures.shaderStorageImageExtendedFormats	= VK_TRUE;
-	    deviceFeatures.shaderStorageImageWriteWithoutFormat = VK_TRUE;
-	    deviceFeatures.imageCubeArray			= VK_TRUE;
-	    deviceFeatures.geometryShader			= VK_TRUE;
+	    m_fullscreenExclusiveSupported = selectedDevice.AddExtension("VK_EXT_full_screen_exclusive");
 	}
 
-	m_enabledFeatures = deviceFeatures;
-
-	VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR };
-	dynamicRenderingFeatures.dynamicRendering			     = VK_TRUE;
-
-	VkPhysicalDeviceVulkan12Features vulkan12Features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES, m_dynamicRenderingExtensionSupport ? &dynamicRenderingFeatures : nullptr };
+	// Enabled features
+	auto deviceFeatures	      = requiredFeatures;
+	auto dynamicRenderingFeatures = requiredDynamicRenderingFeatures;
+	auto vulkan12Features	      = requiredVulkan12Features;
 	{
-	    vulkan12Features.timelineSemaphore			       = VK_TRUE;
-	    vulkan12Features.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
-	    vulkan12Features.imagelessFramebuffer		       = VK_TRUE;
-	    vulkan12Features.descriptorBindingPartiallyBound	       = VK_TRUE;
-	    //vulkan12Features.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE;
-	    vulkan12Features.descriptorBindingSampledImageUpdateAfterBind	= VK_TRUE;
-	    vulkan12Features.descriptorBindingStorageImageUpdateAfterBind	= VK_TRUE;
-	    vulkan12Features.descriptorBindingStorageBufferUpdateAfterBind	= VK_TRUE;
-	    vulkan12Features.descriptorBindingUniformTexelBufferUpdateAfterBind = VK_TRUE;
-	    vulkan12Features.descriptorBindingStorageTexelBufferUpdateAfterBind = VK_TRUE;
-	    vulkan12Features.descriptorBindingUpdateUnusedWhilePending		= VK_TRUE;
+	    vulkan12Features.pNext = dynamicRenderingFeatures.dynamicRendering ? &dynamicRenderingFeatures : nullptr;
 	}
 
-	eastl::vector<const char*> enabledExtensions;
-	enabledExtensions.reserve(REQUIRED_DEVICE_EXTENSION_COUNT + 2);
-	for(const auto* deviceExtension: requiredDeviceExtensions)
+	VkPhysicalDeviceFeatures2 deviceFeatures2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
 	{
-	    enabledExtensions.push_back(deviceExtension);
-	}
-	if(supportsMemoryBudgetExtension)
-	{
-	    enabledExtensions.push_back(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
-	}
-	if(m_dynamicRenderingExtensionSupport)
-	{
-	    enabledExtensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+	    deviceFeatures2.features = deviceFeatures;
+	    deviceFeatures2.pNext    = &vulkan12Features;
 	}
 
+	const auto& enabledExtensions = selectedDevice.GetExtensionNames();
 	VkDeviceCreateInfo createInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
 	{
+	    createInfo.pNext		       = &deviceFeatures2;
 	    createInfo.queueCreateInfoCount    = queueCreateInfoCount;
 	    createInfo.pQueueCreateInfos       = queueCreateInfos;
 	    createInfo.enabledLayerCount       = 0;
 	    createInfo.ppEnabledLayerNames     = nullptr;
-	    createInfo.pEnabledFeatures	       = &deviceFeatures;
+	    createInfo.pEnabledFeatures	       = nullptr;
 	    createInfo.enabledExtensionCount   = static_cast<unsigned int>(enabledExtensions.size());
 	    createInfo.ppEnabledExtensionNames = enabledExtensions.data();
 	}
 
 	if(vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device) != VK_SUCCESS)
 	{
-	    LOG_CRITICAL("Failed to create logical device");
+	    LOG_CORE_CRITICAL("Failed to create logical device");
 	    return;
 	}
 
-	LOG_INFO("Logical Device Created ({0})", m_properties.deviceName);
+	LOG_CORE_INFO("Logical Device Created ({0})", selectedDevice.GetProperties().deviceName);
 
-	vkGetDeviceQueue(m_device, m_graphicsQueue.GetQueueFamily(), 0, m_graphicsQueue.GetQueue());
-	vkGetDeviceQueue(m_device, m_computeQueue.GetQueueFamily(), 0, m_computeQueue.GetQueue());
-	vkGetDeviceQueue(m_device, m_transferQueue.GetQueueFamily(), 0, m_transferQueue.GetQueue());
+	Vulkan::InitializePlatform(m_instance, m_device);
 
-	unsigned int queueFamilyPropertyCount = 0;
-	vkGetPhysicalDeviceQueueFamilyProperties(m_physicalDevice, &queueFamilyPropertyCount, nullptr);
-	eastl::vector<VkQueueFamilyProperties> queueFamilyProperties(queueFamilyPropertyCount);
-	vkGetPhysicalDeviceQueueFamilyProperties(m_physicalDevice, &queueFamilyPropertyCount, queueFamilyProperties.data());
+	// Get Device Queue Info
+	{
+	    vkGetDeviceQueue(m_device, m_graphicsQueue.GetQueueFamily(), 0, m_graphicsQueue.GetQueue());
+	    vkGetDeviceQueue(m_device, m_computeQueue.GetQueueFamily(), 0, m_computeQueue.GetQueue());
+	    vkGetDeviceQueue(m_device, m_transferQueue.GetQueueFamily(), 0, m_transferQueue.GetQueue());
 
-	m_graphicsQueue.m_timestampValidBits = queueFamilyProperties[m_graphicsQueue.m_queueFamily].timestampValidBits;
-	m_computeQueue.m_timestampValidBits  = queueFamilyProperties[m_computeQueue.m_queueFamily].timestampValidBits;
-	m_transferQueue.m_timestampValidBits = queueFamilyProperties[m_transferQueue.m_queueFamily].timestampValidBits;
+	    unsigned int queueFamilyPropertyCount = 0;
+	    vkGetPhysicalDeviceQueueFamilyProperties(m_physicalDevice, &queueFamilyPropertyCount, nullptr);
+	    eastl::vector<VkQueueFamilyProperties> queueFamilyProperties(queueFamilyPropertyCount);
+	    vkGetPhysicalDeviceQueueFamilyProperties(m_physicalDevice, &queueFamilyPropertyCount, queueFamilyProperties.data());
+
+	    m_graphicsQueue.m_timestampValidBits = queueFamilyProperties[m_graphicsQueue.m_queueFamily].timestampValidBits;
+	    m_computeQueue.m_timestampValidBits	 = queueFamilyProperties[m_computeQueue.m_queueFamily].timestampValidBits;
+	    m_transferQueue.m_timestampValidBits = queueFamilyProperties[m_transferQueue.m_queueFamily].timestampValidBits;
+	}
     }
 }
 
@@ -456,21 +347,34 @@ VulkanGraphicsAdapter::~VulkanGraphicsAdapter()
 {
 }
 
-void VulkanGraphicsAdapter::CreateSwapchain(const Queue* presentQueue, unsigned int width, unsigned int height, bool fullscreen, PresentMode presentMode, Swapchain** swapchain)
+void VulkanGraphicsAdapter::CreateSwapchain(const Queue* presentQueue, unsigned int width, unsigned int height, Window* window, PresentMode presentMode, Swapchain** swapchain)
 {
     ASSERT(!m_swapchain);
     ASSERT(width && height);
 
     Queue* queue = nullptr;
-    queue	 = presentQueue == &m_graphicsQueue ? &m_graphicsQueue : queue;
-    queue	 = presentQueue == &m_computeQueue ? &m_computeQueue : queue;
+
+    queue = presentQueue == &m_graphicsQueue ? &m_graphicsQueue : queue;
+    queue = presentQueue == &m_computeQueue ? &m_computeQueue : queue;
     ASSERT(queue);
-    *swapchain = m_swapchain = new VulkanSwapchain(m_physicalDevice, m_device, m_surface, queue, width, height, fullscreen, presentMode);
+
+    *swapchain = m_swapchain = new VulkanSwapchain(m_physicalDevice, m_device, m_surface, queue, width, height, window, presentMode);
 }
 
 void VulkanGraphicsAdapter::CreateSemaphore(uint64_t initialValue, Semaphore** semaphore)
 {
     *semaphore = new VulkanSemaphore(m_device, initialValue); // TODO: ALLOCATOR
+}
+
+bool VulkanGraphicsAdapter::ActivateFullscreen(Window* window)
+{
+    if(m_swapchain == nullptr || !m_fullscreenExclusiveSupported)
+    {
+	return false;
+    }
+
+    m_swapchain->Resize(window->GetWidth(), window->GetHeight(), window, m_swapchain->GetPresentMode());
+    return Vulkan::ActivateFullscreen(window, m_swapchain);
 }
 
 Queue* VulkanGraphicsAdapter::GetGraphicsQueue()

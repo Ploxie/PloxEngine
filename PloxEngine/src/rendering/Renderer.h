@@ -20,6 +20,8 @@ public:
 
     void Render() noexcept;
 
+    bool ActivateFullscreen(Window* window);
+
 private:
     GraphicsAdapter* m_graphicsAdapter;
     Swapchain* m_swapchain;

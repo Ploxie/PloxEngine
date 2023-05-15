@@ -5,17 +5,22 @@
 #pragma once
 #include "eastl/vector.h"
 #include "rendering/GraphicsAdapter.h"
+#include "VulkanInstanceProperties.h"
 #include "VulkanQueue.h"
 #include "VulkanSemaphore.h"
 
 class VulkanSwapchain;
+class Window;
 
 #undef CreateSemaphore
 
 namespace Vulkan
 {
-    void AppendPlatformExtensions(eastl::vector<const char*>& extensions);
+    void AddPlatformInstanceExtensions(VulkanInstanceProperties& instanceProperties);
     VkResult CreateWindowSurface(void* windowHandle, VkInstance instance, VkSurfaceKHR* surface);
+    void InitializePlatform(VkInstance instance, VkDevice device);
+    void AddSwapchainWindowInfo(VkSwapchainCreateInfoKHR& swapchainInfo, Window* window);
+    bool ActivateFullscreen(Window* window, VulkanSwapchain* swapchain);
 }; // namespace Vulkan
 
 class VulkanGraphicsAdapter : public GraphicsAdapter
@@ -24,8 +29,10 @@ public:
     explicit VulkanGraphicsAdapter(void* windowHandle, bool debugLayer);
     ~VulkanGraphicsAdapter() override;
 
-    void CreateSwapchain(const Queue* presentQueue, unsigned int width, unsigned int height, bool fullscreen, PresentMode presentMode, Swapchain** swapchain) override;
+    void CreateSwapchain(const Queue* presentQueue, unsigned int width, unsigned int height, Window* window, PresentMode presentMode, Swapchain** swapchain) override;
     void CreateSemaphore(uint64_t initialValue, Semaphore** semaphore) override;
+
+    bool ActivateFullscreen(Window* window) override;
 
     Queue* GetGraphicsQueue() override;
     Queue* GetComputeQueue() override;
@@ -35,9 +42,6 @@ private:
     VkInstance m_instance			   = VK_NULL_HANDLE;
     VkDevice m_device				   = VK_NULL_HANDLE;
     VkPhysicalDevice m_physicalDevice		   = VK_NULL_HANDLE;
-    VkPhysicalDeviceFeatures m_features		   = {};
-    VkPhysicalDeviceFeatures m_enabledFeatures	   = {};
-    VkPhysicalDeviceProperties m_properties	   = {};
     VulkanQueue m_graphicsQueue			   = {};
     VulkanQueue m_computeQueue			   = {};
     VulkanQueue m_transferQueue			   = {};
@@ -46,4 +50,6 @@ private:
     VulkanSwapchain* m_swapchain		   = nullptr;
     //DynamicPoolAllocator m_commandListPoolMemoryPool;
     bool m_dynamicRenderingExtensionSupport = false;
+    bool m_supportsMemoryBudgetExtension    = false;
+    bool m_fullscreenExclusiveSupported	    = false;
 };

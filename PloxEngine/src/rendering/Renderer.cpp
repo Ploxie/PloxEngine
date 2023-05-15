@@ -9,7 +9,7 @@ void Renderer::Initialize(Window* window, GraphicsBackendType backend)
 {
     bool debugLayer   = true;
     m_graphicsAdapter = GraphicsAdapter::Create(window->GetRawHandle(), debugLayer, backend);
-    m_graphicsAdapter->CreateSwapchain(m_graphicsAdapter->GetGraphicsQueue(), m_swapchainWidth, m_swapchainHeight, true, PresentMode::IMMEDIATE, &m_swapchain);
+    m_graphicsAdapter->CreateSwapchain(m_graphicsAdapter->GetGraphicsQueue(), window->GetWidth(), window->GetHeight(), window, PresentMode::IMMEDIATE, &m_swapchain);
 
     m_graphicsAdapter->CreateSemaphore(0, &m_semaphores[0]);
     m_graphicsAdapter->CreateSemaphore(0, &m_semaphores[1]);
@@ -26,4 +26,9 @@ void Renderer::Render() noexcept
     m_semaphoreValues[0]++;
 
     m_frame++;
+}
+
+bool Renderer::ActivateFullscreen(Window* window)
+{
+    return m_graphicsAdapter->ActivateFullscreen(window);
 }

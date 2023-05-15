@@ -31,7 +31,11 @@
 *.out
 *.app
 
+*.pdb
+*.ilk
+
 build/
+bin/
 cmake-build-debug/
 .idea/
 .vscode
