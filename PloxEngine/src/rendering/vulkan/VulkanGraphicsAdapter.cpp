@@ -39,6 +39,7 @@ VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer
 
 	VulkanInstanceProperties instanceProperties;
 	instanceProperties.AddExtension(VK_KHR_SURFACE_EXTENSION_NAME);
+	instanceProperties.AddExtension(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
 	instanceProperties.AddExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 	instanceProperties.AddExtension(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 	instanceProperties.AddLayer("VK_LAYER_KHRONOS_validation");
@@ -301,8 +302,12 @@ VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer
 	// Enabled features
 	auto deviceFeatures	      = requiredFeatures;
 	auto dynamicRenderingFeatures = requiredDynamicRenderingFeatures;
-	auto vulkan12Features	      = requiredVulkan12Features;
 	{
+	    dynamicRenderingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+	}
+	auto vulkan12Features = requiredVulkan12Features;
+	{
+	    vulkan12Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
 	    vulkan12Features.pNext = dynamicRenderingFeatures.dynamicRendering ? &dynamicRenderingFeatures : nullptr;
 	}
 
