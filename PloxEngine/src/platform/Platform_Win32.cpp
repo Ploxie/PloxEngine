@@ -10,90 +10,76 @@
     #include <windows.h>
     #include <windowsx.h>
 
-    #undef CreateSemaphore
-
 Platform Platform::s_instance;
 
-LRESULT CALLBACK Win32_process_message(HWND hwnd, unsigned int msg, WPARAM w_param, LPARAM l_param);
+LRESULT CALLBACK ProcessWin32Message(HWND handle, unsigned int msg, WPARAM w_param, LPARAM l_param);
 
 bool Platform::Initialize(const char* applicationName)
 {
     s_instance.m_applicationInstance = GetModuleHandleA(nullptr);
 
-    s_instance.m_cursors[(size_t) Window::MouseCursor::ARROW]		  = LoadCursor(nullptr, IDC_ARROW);
-    s_instance.m_cursors[(size_t) Window::MouseCursor::TEXT]		  = LoadCursor(nullptr, IDC_IBEAM);
-    s_instance.m_cursors[(size_t) Window::MouseCursor::RESIZE_ALL]	  = LoadCursor(nullptr, IDC_SIZEALL);
-    s_instance.m_cursors[(size_t) Window::MouseCursor::RESIZE_VERTICAL]	  = LoadCursor(nullptr, IDC_SIZENS);
-    s_instance.m_cursors[(size_t) Window::MouseCursor::RESIZE_HORIZONTAL] = LoadCursor(nullptr, IDC_SIZEWE);
-    s_instance.m_cursors[(size_t) Window::MouseCursor::RESIZE_TRBL]	  = LoadCursor(nullptr, IDC_SIZENESW);
-    s_instance.m_cursors[(size_t) Window::MouseCursor::RESIZE_TLBR]	  = LoadCursor(nullptr, IDC_SIZENWSE);
-    s_instance.m_cursors[(size_t) Window::MouseCursor::HAND]		  = LoadCursor(nullptr, IDC_HAND);
-    s_instance.m_cursors[(size_t) Window::MouseCursor::CROSSHAIR]	  = LoadCursor(nullptr, IDC_CROSS);
+    s_instance.m_cursors[static_cast<size_t>(Window::MouseCursor::ARROW)]	      = LoadCursor(nullptr, IDC_ARROW);
+    s_instance.m_cursors[static_cast<size_t>(Window::MouseCursor::TEXT)]	      = LoadCursor(nullptr, IDC_IBEAM);
+    s_instance.m_cursors[static_cast<size_t>(Window::MouseCursor::RESIZE_ALL)]	      = LoadCursor(nullptr, IDC_SIZEALL);
+    s_instance.m_cursors[static_cast<size_t>(Window::MouseCursor::RESIZE_VERTICAL)]   = LoadCursor(nullptr, IDC_SIZENS);
+    s_instance.m_cursors[static_cast<size_t>(Window::MouseCursor::RESIZE_HORIZONTAL)] = LoadCursor(nullptr, IDC_SIZEWE);
+    s_instance.m_cursors[static_cast<size_t>(Window::MouseCursor::RESIZE_TRBL)]	      = LoadCursor(nullptr, IDC_SIZENESW);
+    s_instance.m_cursors[static_cast<size_t>(Window::MouseCursor::RESIZE_TLBR)]	      = LoadCursor(nullptr, IDC_SIZENWSE);
+    s_instance.m_cursors[static_cast<size_t>(Window::MouseCursor::HAND)]	      = LoadCursor(nullptr, IDC_HAND);
+    s_instance.m_cursors[static_cast<size_t>(Window::MouseCursor::CROSSHAIR)]	      = LoadCursor(nullptr, IDC_CROSS);
+
+
 
     return true;
 }
 
-WindowHandle Platform::CreatePlatformWindow(const char* title, unsigned int x, unsigned int y, unsigned int width, unsigned int height)
+WindowHandle Platform::CreatePlatformWindow(const char* title, int x, int y, int width, int height)
 {
     auto* instance = static_cast<HINSTANCE>(s_instance.m_applicationInstance);
 
     char className[256] = "\0";
-    strcat_s(className, title);
-    strcat_s(className, "_class\0");
-
-    HICON icon = LoadIcon(instance, IDI_APPLICATION);
-    WNDCLASSA wc;
-    memset(&wc, 0, sizeof(wc));
-    wc.style	     = CS_DBLCLKS;
-    wc.lpfnWndProc   = Win32_process_message;
-    wc.cbClsExtra    = 0;
-    wc.cbWndExtra    = 0;
-    wc.hInstance     = instance;
-    wc.hIcon	     = icon;
-    wc.hCursor	     = LoadCursor(nullptr, IDC_HAND);
-    wc.hbrBackground = nullptr;
-    wc.lpszClassName = className;
-
-    if(RegisterClassA(&wc) == 0)
+    // Register class
     {
-	LOG_CRITICAL("PlatformWin32: Failed to register class");
-	return NULL_WINDOW_HANDLE;
+	strcat_s(className, title);
+	strcat_s(className, "_class\0");
+
+	HICON icon = LoadIcon(instance, IDI_APPLICATION);
+	WNDCLASSA wc;
+	memset(&wc, 0, sizeof(wc));
+	wc.style	 = CS_DBLCLKS;
+	wc.lpfnWndProc	 = ProcessWin32Message;
+	wc.cbClsExtra	 = 0;
+	wc.cbWndExtra	 = 0;
+	wc.hInstance	 = instance;
+	wc.hIcon	 = icon;
+	wc.hCursor	 = LoadCursor(nullptr, IDC_HAND);
+	wc.hbrBackground = nullptr;
+	wc.lpszClassName = className;
+
+	if(RegisterClassA(&wc) == 0)
+	{
+	    LOG_CORE_CRITICAL("Platform_Win32: Failed to register class");
+	    return NULL_WINDOW_HANDLE;
+	}
     }
 
-    int clientX	     = x;
-    int clientY	     = y;
-    int clientWidth  = width;
-    int clientHeight = height;
-
-    int windowX	     = clientX;
-    int windowY	     = clientY;
-    int windowWidth  = clientWidth;
-    int windowHeight = clientHeight;
-
-    unsigned int windowStyle	     = WS_OVERLAPPED | WS_SYSMENU | WS_CAPTION;
+    unsigned int windowStyle	     = WS_OVERLAPPEDWINDOW;
     unsigned int windowStyleExtended = WS_EX_APPWINDOW;
 
-    //windowStyle |= WS_MAXIMIZEBOX;
-    //windowStyle |= WS_MINIMIZEBOX;
-    //windowStyle |= WS_THICKFRAME;
+    RECT windowRect = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
+    AdjustWindowRectEx(&windowRect, windowStyle, 0, windowStyleExtended);
 
-    RECT borderRect = { 0, 0, 0, 0 };
-    AdjustWindowRectEx(&borderRect, windowStyle, 0, windowStyleExtended);
-
-    windowX += borderRect.left;
-    windowY += borderRect.top;
-
-    HWND hwnd = CreateWindowExA(windowStyleExtended, className, title, windowStyle, windowX, windowY, windowWidth, windowHeight, nullptr, nullptr, instance, nullptr);
+    HWND hwnd = CreateWindowExA(windowStyleExtended, className, title, windowStyle, CW_USEDEFAULT, CW_USEDEFAULT, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top, nullptr, nullptr, instance, nullptr);
 
     if(hwnd == nullptr)
     {
-	LOG_CRITICAL("PlatformWin32: Failed to create window!");
+	LOG_CORE_CRITICAL("Platform_Win32: Failed to create window!");
 	return NULL_WINDOW_HANDLE;
     }
 
     auto handle = static_cast<WindowHandle>(s_instance.m_windowHandleManager.Allocate());
-    Window window(handle, hwnd, title, x, y, width, height);
-    s_instance.m_windows.push_back(window);
+
+    s_instance.m_windows.push_back(Window(handle, hwnd, title, x, y, width, height));
 
     ShowWindow(hwnd, SW_SHOW);
 
@@ -172,7 +158,7 @@ bool Platform::PumpMessages()
     return !s_instance.m_windows.empty();
 }
 
-LRESULT CALLBACK Win32_process_message(HWND handle, unsigned int msg, WPARAM w_param, LPARAM l_param)
+LRESULT CALLBACK ProcessWin32Message(HWND handle, unsigned int msg, WPARAM w_param, LPARAM l_param)
 {
     Window* window     = Platform::GetWindow(static_cast<void*>(handle));
     Keyboard& keyboard = window->GetKeyboard();
