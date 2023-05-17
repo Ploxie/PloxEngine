@@ -10,3 +10,9 @@ struct Extent2D
     uint32_t m_width;
     uint32_t m_height;
 };
+
+struct Offset2D
+{
+    int32_t m_x;
+    int32_t m_y;
+};
