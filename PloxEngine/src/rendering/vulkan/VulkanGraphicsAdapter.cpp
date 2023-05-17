@@ -7,6 +7,7 @@
 #include "eastl/string.h"
 #include "platform/window/Window.h"
 #include "VulkanDeviceInfo.h"
+#include "VulkanRenderPassCache.h"
 #include "VulkanSwapchain.h"
 
 #undef CreateSemaphore
@@ -306,7 +307,8 @@ VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer
 
 	// Enabled Non-Required Extensions
 	{
-	    m_fullscreenExclusiveSupported = selectedDevice.AddExtension("VK_EXT_full_screen_exclusive");
+	    m_fullscreenExclusiveSupported     = selectedDevice.AddExtension("VK_EXT_full_screen_exclusive");
+	    m_dynamicRenderingExtensionSupport = selectedDevice.HasFeatures(requiredDynamicRenderingFeatures);
 	}
 
 	// Enabled features
@@ -372,10 +374,13 @@ VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer
 	    m_transferQueue.m_timestampValidBits = queueFamilyProperties[m_transferQueue.m_queueFamily].timestampValidBits;
 	}
     }
+
+    m_renderPassCache = new VulkanRenderPassCache(m_device);
 }
 
 VulkanGraphicsAdapter::~VulkanGraphicsAdapter()
 {
+    delete m_renderPassCache;
 }
 
 void VulkanGraphicsAdapter::CreateSwapchain(const Queue* presentQueue, unsigned int width, unsigned int height, Window* window, PresentMode presentMode, Swapchain** swapchain)
@@ -408,6 +413,11 @@ bool VulkanGraphicsAdapter::ActivateFullscreen(Window* window)
     return Vulkan::ActivateFullscreen(window, m_swapchain);
 }
 
+VkDevice& VulkanGraphicsAdapter::GetDevice()
+{
+    return m_device;
+}
+
 Queue* VulkanGraphicsAdapter::GetGraphicsQueue()
 {
     return &m_graphicsQueue;
@@ -421,6 +431,16 @@ Queue* VulkanGraphicsAdapter::GetComputeQueue()
 Queue* VulkanGraphicsAdapter::GetTransferQueue()
 {
     return &m_transferQueue;
+}
+
+VkRenderPass VulkanGraphicsAdapter::GetRenderPass(const VulkanRenderPassDescription& renderPassDescription)
+{
+    return m_renderPassCache->GetRenderPass(renderPassDescription);
+}
+
+bool VulkanGraphicsAdapter::IsDynamicRenderingExtensionSupported()
+{
+    return m_dynamicRenderingExtensionSupport;
 }
 
 void Vulkan::SetResourceName(VkDevice device, VkObjectType type, uint64_t handle, const char* name)

@@ -7,10 +7,12 @@
 #include "rendering/GraphicsAdapter.h"
 #include "VulkanInstanceProperties.h"
 #include "VulkanQueue.h"
+#include "VulkanRenderPassDescription.h"
 #include "VulkanSemaphore.h"
 
 class VulkanSwapchain;
 class Window;
+class VulkanRenderPassCache;
 
 #undef CreateSemaphore
 
@@ -35,9 +37,14 @@ public:
 
     bool ActivateFullscreen(Window* window) override;
 
+    VkDevice& GetDevice();
     Queue* GetGraphicsQueue() override;
     Queue* GetComputeQueue() override;
     Queue* GetTransferQueue() override;
+
+    VkRenderPass GetRenderPass(const VulkanRenderPassDescription& renderPassDescription);
+
+    bool IsDynamicRenderingExtensionSupported();
 
 private:
     VkInstance m_instance			   = VK_NULL_HANDLE;
@@ -48,6 +55,7 @@ private:
     VulkanQueue m_transferQueue			   = {};
     VkSurfaceKHR m_surface			   = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT m_debugUtilsMessenger = VK_NULL_HANDLE;
+    VulkanRenderPassCache* m_renderPassCache	   = nullptr;
     VulkanSwapchain* m_swapchain		   = nullptr;
     //DynamicPoolAllocator m_commandListPoolMemoryPool;
     bool m_dynamicRenderingExtensionSupport = false;
