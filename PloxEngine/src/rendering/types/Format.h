@@ -124,7 +124,7 @@ enum class Format
     R64G64_SFLOAT	       = 115,
     R64G64B64_UINT	       = 116,
     R64G64B64_SINT	       = 117,
-    R64G64B64_Sf32	       = 118,
+    R64G64B64_SFLOAT	       = 118,
     R64G64B64A64_UINT	       = 119,
     R64G64B64A64_SINT	       = 120,
     R64G64B64A64_SFLOAT	       = 121,
