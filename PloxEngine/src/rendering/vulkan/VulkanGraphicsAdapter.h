@@ -5,6 +5,7 @@
 #pragma once
 #include "eastl/vector.h"
 #include "rendering/GraphicsAdapter.h"
+#include "VulkanFrameBufferDescription.h"
 #include "VulkanInstanceProperties.h"
 #include "VulkanQueue.h"
 #include "VulkanRenderPassDescription.h"
@@ -43,6 +44,7 @@ public:
     Queue* GetTransferQueue() override;
 
     VkRenderPass GetRenderPass(const VulkanRenderPassDescription& renderPassDescription);
+    VkFramebuffer GetFrameBuffer(const VulkanFrameBufferDescription& frameBufferDescription);
 
     bool IsDynamicRenderingExtensionSupported();
 
@@ -56,6 +58,7 @@ private:
     VkSurfaceKHR m_surface			   = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT m_debugUtilsMessenger = VK_NULL_HANDLE;
     VulkanRenderPassCache* m_renderPassCache	   = nullptr;
+    VulkanFrameBufferCache* m_frameBufferCache	   = nullptr;
     VulkanSwapchain* m_swapchain		   = nullptr;
     //DynamicPoolAllocator m_commandListPoolMemoryPool;
     bool m_dynamicRenderingExtensionSupport = false;

@@ -7,6 +7,7 @@
 #include "eastl/string.h"
 #include "platform/window/Window.h"
 #include "VulkanDeviceInfo.h"
+#include "VulkanFrameBufferCache.h"
 #include "VulkanRenderPassCache.h"
 #include "VulkanSwapchain.h"
 
@@ -375,7 +376,8 @@ VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer
 	}
     }
 
-    m_renderPassCache = new VulkanRenderPassCache(m_device);
+    m_renderPassCache  = new VulkanRenderPassCache(m_device);
+    m_frameBufferCache = new VulkanFrameBufferCache(m_device);
 }
 
 VulkanGraphicsAdapter::~VulkanGraphicsAdapter()
@@ -436,6 +438,11 @@ Queue* VulkanGraphicsAdapter::GetTransferQueue()
 VkRenderPass VulkanGraphicsAdapter::GetRenderPass(const VulkanRenderPassDescription& renderPassDescription)
 {
     return m_renderPassCache->GetRenderPass(renderPassDescription);
+}
+
+VkFramebuffer VulkanGraphicsAdapter::GetFrameBuffer(const VulkanFrameBufferDescription& frameBufferDescription)
+{
+    return m_frameBufferCache->GetFrameBuffer(frameBufferDescription);
 }
 
 bool VulkanGraphicsAdapter::IsDynamicRenderingExtensionSupported()
