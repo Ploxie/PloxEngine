@@ -51,7 +51,7 @@ void Vulkan::InitializePlatform(VkInstance instance, VkDevice device)
     ASSERT(s_releaseFullscreenExclusiveMode);
 }
 
-void Vulkan::AddSwapchainWindowInfo(VkSwapchainCreateInfoKHR& swapchainInfo, Window* window)
+void Vulkan::AddFullscreenExclusiveInfo(const void* pNext, Window* window)
 {
     s_surfaceFullscreenExclusiveWin32Info = { VK_STRUCTURE_TYPE_SURFACE_FULL_SCREEN_EXCLUSIVE_WIN32_INFO_EXT };
     {
@@ -67,7 +67,7 @@ void Vulkan::AddSwapchainWindowInfo(VkSwapchainCreateInfoKHR& swapchainInfo, Win
 	case WindowMode::WINDOWED_FULLSCREEN: s_surfaceFullscreenExclusiveInfo.fullScreenExclusive = VK_FULL_SCREEN_EXCLUSIVE_ALLOWED_EXT; break;
     }
 
-    swapchainInfo.pNext = &s_surfaceFullscreenExclusiveInfo;
+    pNext = &s_surfaceFullscreenExclusiveInfo;
 }
 
 bool Vulkan::ActivateFullscreen(Window* window, VulkanSwapchain* swapchain)
