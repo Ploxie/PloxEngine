@@ -19,8 +19,9 @@ namespace Vulkan
     void AddPlatformInstanceExtensions(VulkanInstanceProperties& instanceProperties);
     VkResult CreateWindowSurface(void* windowHandle, VkInstance instance, VkSurfaceKHR* surface);
     void InitializePlatform(VkInstance instance, VkDevice device);
-    void AddSwapchainWindowInfo(VkSwapchainCreateInfoKHR& swapchainInfo, Window* window);
+    void AddFullscreenExclusiveInfo(const void* pNext, Window* window);
     bool ActivateFullscreen(Window* window, VulkanSwapchain* swapchain);
+    void SetResourceName(VkDevice device, VkObjectType type, uint64_t handle, const char* name);
 }; // namespace Vulkan
 
 class VulkanGraphicsAdapter : public GraphicsAdapter

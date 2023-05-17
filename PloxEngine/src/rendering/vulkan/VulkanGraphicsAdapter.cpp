@@ -4,11 +4,14 @@
 #include "VulkanGraphicsAdapter.h"
 #include "core/assert.h"
 #include "core/logger.h"
+#include "eastl/string.h"
 #include "platform/window/Window.h"
 #include "VulkanDeviceInfo.h"
 #include "VulkanSwapchain.h"
 
 #undef CreateSemaphore
+
+static PFN_vkSetDebugUtilsObjectNameEXT s_vkSetDebugUtilsObjectName = {};
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -25,11 +28,8 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     {
 	severity = spdlog::level::err;
     }
-    
-    Logger::GetCoreLogger()->log(severity, "Vulkan Validation Layer:");
-    Logger::GetCoreLogger()->log(severity, "\tMessage ID Name: {0}", pCallbackData->pMessageIdName);
-    Logger::GetCoreLogger()->log(severity, "\tMessage ID Number: {0}", pCallbackData->messageIdNumber);
-    Logger::GetCoreLogger()->log(severity, "\tMessage: {0}", pCallbackData->pMessage);
+
+    Logger::GetCoreLogger()->log(severity, "{0}\n", pCallbackData->pMessage);
 
     return VK_FALSE;
 }
@@ -348,6 +348,8 @@ VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer
 
 	LOG_CORE_INFO("Logical Device Created ({0})", selectedDevice.GetProperties().deviceName);
 
+	s_vkSetDebugUtilsObjectName = (PFN_vkSetDebugUtilsObjectNameEXT) vkGetDeviceProcAddr(m_device, "vkSetDebugUtilsObjectNameEXT");
+
 	Vulkan::InitializePlatform(m_instance, m_device);
 
 	// Get Device Queue Info
@@ -355,6 +357,10 @@ VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer
 	    vkGetDeviceQueue(m_device, m_graphicsQueue.GetQueueFamily(), 0, m_graphicsQueue.GetQueue());
 	    vkGetDeviceQueue(m_device, m_computeQueue.GetQueueFamily(), 0, m_computeQueue.GetQueue());
 	    vkGetDeviceQueue(m_device, m_transferQueue.GetQueueFamily(), 0, m_transferQueue.GetQueue());
+
+	    Vulkan::SetResourceName(m_device, VK_OBJECT_TYPE_QUEUE, (uint64_t) *m_graphicsQueue.GetQueue(), "Graphics Queue");
+	    Vulkan::SetResourceName(m_device, VK_OBJECT_TYPE_QUEUE, (uint64_t) *m_computeQueue.GetQueue(), "Compute Queue");
+	    Vulkan::SetResourceName(m_device, VK_OBJECT_TYPE_QUEUE, (uint64_t) *m_transferQueue.GetQueue(), "Transfer Queue");
 
 	    unsigned int queueFamilyPropertyCount = 0;
 	    vkGetPhysicalDeviceQueueFamilyProperties(m_physicalDevice, &queueFamilyPropertyCount, nullptr);
@@ -415,4 +421,22 @@ Queue* VulkanGraphicsAdapter::GetComputeQueue()
 Queue* VulkanGraphicsAdapter::GetTransferQueue()
 {
     return &m_transferQueue;
+}
+
+void Vulkan::SetResourceName(VkDevice device, VkObjectType type, uint64_t handle, const char* name)
+{
+    if(handle == 0 || name == nullptr)
+    {
+	return;
+    }
+
+    static std::mutex mutex;
+    std::unique_lock<std::mutex> lock(mutex);
+
+    VkDebugUtilsObjectNameInfoEXT nameInfo = {};
+    nameInfo.sType			   = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+    nameInfo.objectType			   = type;
+    nameInfo.objectHandle		   = handle;
+    nameInfo.pObjectName		   = name;
+    s_vkSetDebugUtilsObjectName(device, &nameInfo);
 }
