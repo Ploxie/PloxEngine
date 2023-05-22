@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "core/Assert.h"
 #include "eastl/string.h"
 #include "Enum.h"
 #include <malloc.h>
@@ -18,6 +19,29 @@
 namespace Util
 {
     void FatalExit(const char *message, int exitCode);
+
+    uint32_t FindFirstSetBit(uint32_t mask);
+    uint32_t FindLastSetBit(uint32_t mask);
+
+    template<typename T>
+    inline T AlignUp(T value, T alignment)
+    {
+	return (value + alignment - 1) / alignment * alignment;
+    }
+
+    template <typename T>
+    inline T AlignDown(T value, T alignment)
+    {
+	return value / alignment * alignment;
+    }
+
+    template<typename T>
+    inline T AlignPow2Up(T value, T alignment)
+    {
+	const T mask = alignment - 1;
+	ASSERT((alignment & mask) == 0);
+	return (value + mask) & ~mask;
+    }
 
     template<class T>
     inline void HashCombine(size_t &s, const T &v)
