@@ -23,6 +23,9 @@ set(LIBRARIES
         ${LIB_DIR}/EASTL.lib
         Vulkan::Vulkan)
 
+# Defines
+add_definitions(-DVK_NO_PROTOTYPES -DVK_USE_PLATFORM_WIN32_KHR -DVK_KHR_win32_surface)
+
 # Binaries
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 

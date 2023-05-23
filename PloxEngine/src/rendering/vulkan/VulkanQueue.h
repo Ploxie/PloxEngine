@@ -16,6 +16,7 @@ public:
     unsigned int GetTimestampValidBits() const override;
     float GetTimestampPeriod() const override;
     bool CanPresent() const override;
+    void Submit(uint32_t count, const SubmitInfo* submitInfo) override;
     unsigned int GetQueueFamily() const;
 
 private:

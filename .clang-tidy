@@ -44,7 +44,9 @@ Checks: >
   -readability-function-cognitive-complexity,
   -readability-implicit-bool-conversion,
   -readability-uppercase-literal-suffix,
-  -misc-no-recursion
+  -misc-no-recursion,
+  -cppcoreguidelines-pro-type-cstyle-cast,
+  -bugprone-suspicious-memory-comparison
 # Turn all the warnings from the checks above into errors.
 WarningsAsErrors: "*"
 

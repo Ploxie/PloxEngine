@@ -3,12 +3,11 @@
 //
 
 #pragma once
+#include "DescriptorSet.h"
 #include "Extent2D.h"
 #include "Format.h"
 #include "utility/Enum.h"
 #include <cstdint>
-
-class DescriptorSetLayout;
 
 struct ShaderStageCreateInfo
 {
@@ -142,15 +141,6 @@ enum class FrontFace
     CLOCKWISE	      = 1,
 };
 
-enum class SampleCount
-{
-    _1	= 0x00000001,
-    _2	= 0x00000002,
-    _4	= 0x00000004,
-    _8	= 0x00000008,
-    _16 = 0x00000010,
-};
-
 enum class CompareOp
 {
     NEVER	     = 0,
@@ -255,22 +245,6 @@ struct AttachmentFormats
     uint32_t ColorAttachmentCount    = 0;
     Format ColorAttachmentFormats[8] = {};
     Format DepthStencilFormat	     = Format::UNDEFINED;
-};
-
-enum class DescriptorType
-{
-    SAMPLER		   = 0,
-    TEXTURE		   = 1,
-    RW_TEXTURE		   = 2,
-    TYPED_BUFFER	   = 3,
-    RW_TYPED_BUFFER	   = 4,
-    CONSTANT_BUFFER	   = 5,
-    BYTE_BUFFER		   = 6,
-    RW_BYTE_BUFFER	   = 7,
-    STRUCTURED_BUFFER	   = 8,
-    RW_STRUCTURED_BUFFER   = 9,
-    OFFSET_CONSTANT_BUFFER = 10,
-    RANGE_SIZE		   = OFFSET_CONSTANT_BUFFER + 1
 };
 
 enum class Filter
@@ -451,7 +425,7 @@ struct GraphicsPipelineCreateInfo
     MultisampleState MultiSampleState;
     DepthStencilState DepthStencilState;
     BlendState BlendState;
-    DynamicStateFlags DynamicStateFlags = (DynamicStateFlags) 0;
+    DynamicStateFlags DynamicStateFlags = static_cast<enum class DynamicStateFlags>(0);
     AttachmentFormats AttachmentFormats;
     PipelineLayoutCreateInfo LayoutCreateInfo;
 };

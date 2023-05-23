@@ -5,6 +5,9 @@
 #include "core/Assert.h"
 #include "EASTL/vector.h"
 #include "rendering/RenderUtilities.h"
+#include "utility/memory/DefaultAllocator.h"
+#include "volk.h"
+#include "VulkanBuffer.h"
 #include "VulkanUtilities.h"
 
 VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(VkDevice device, uint32_t bindingCount, const VkDescriptorSetLayoutBinding* bindings, const VkDescriptorBindingFlags* bindingFlags)
@@ -174,17 +177,16 @@ void VulkanDescriptorSet::Update(uint32_t count, const DescriptorSetUpdate* upda
 		}
 		case DescriptorType::CONSTANT_BUFFER:
 		{
-		    /*
-		    for (size_t k = 0; k < update.DescriptorCount; ++k)
+		    for(size_t k = 0; k < update.DescriptorCount; ++k)
 		    {
-			const auto &info = update.BufferInfo ? update.BufferInfo[k] : update.BufferInfo1;
-			const auto *bufferVk = dynamic_cast<const VulkanBuffer *>(info.Buffer);
+			const auto& info     = update.BufferInfo ? update.BufferInfo[k] : update.BufferInfo1;
+			const auto* bufferVk = dynamic_cast<const VulkanBuffer*>(info.Buffer);
 			ASSERT(bufferVk);
-			bufferInfos.push_back({ (VkBuffer)bufferVk->GetNativeHandle(), info.Offset, info.Range });
+			bufferInfos.push_back({ static_cast<VkBuffer>(bufferVk->GetNativeHandle()), info.Offset, info.Range });
 		    }
 		    write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		    write.pBufferInfo = bufferInfos.data() + bufferInfos.size() - update.DescriptorCount;
-		     */
+		    write.pBufferInfo	 = bufferInfos.data() + bufferInfos.size() - update.DescriptorCount;
+
 		    break;
 		}
 		case DescriptorType::BYTE_BUFFER:
@@ -192,30 +194,27 @@ void VulkanDescriptorSet::Update(uint32_t count, const DescriptorSetUpdate* upda
 		case DescriptorType::STRUCTURED_BUFFER:
 		case DescriptorType::RW_STRUCTURED_BUFFER:
 		{
-		    // TODO
-		    /*
-		    for (size_t k = 0; k < update.DescriptorCount; ++k)
+		    for(size_t k = 0; k < update.DescriptorCount; ++k)
 		    {
-			const auto &info = update.m_bufferInfo ? update.m_bufferInfo[k] : update.m_bufferInfo1;
-			const auto *bufferVk = dynamic_cast<const BufferVk *>(info.m_buffer);
-			assert(bufferVk);
-			bufferInfos.push_back({ (VkBuffer)bufferVk->getNativeHandle(), info.m_offset, info.m_range });
+			const auto& info     = update.BufferInfo ? update.BufferInfo[k] : update.BufferInfo1;
+			const auto* bufferVk = dynamic_cast<const VulkanBuffer*>(info.Buffer);
+			ASSERT(bufferVk);
+			bufferInfos.push_back({ static_cast<VkBuffer>(bufferVk->GetNativeHandle()), info.Offset, info.Range });
 		    }
 		    write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		    write.pBufferInfo = bufferInfos.data() + bufferInfos.size() - update.DescriptorCount;
-		     */
+		    write.pBufferInfo	 = bufferInfos.data() + bufferInfos.size() - update.DescriptorCount;
+
 		    break;
 		}
 		case DescriptorType::OFFSET_CONSTANT_BUFFER:
 		{
-		    /*
-		    const auto &info = update.m_bufferInfo ? update.m_bufferInfo[0] : update.m_bufferInfo1;
-		    const auto *bufferVk = dynamic_cast<const BufferVk *>(info.m_buffer);
-		    assert(bufferVk);
-		    bufferInfos.push_back({ (VkBuffer)bufferVk->getNativeHandle(), info.m_offset, info.m_range });
+		    const auto& info	 = update.BufferInfo ? update.BufferInfo[0] : update.BufferInfo1;
+		    const auto* bufferVk = dynamic_cast<const VulkanBuffer*>(info.Buffer);
+		    ASSERT(bufferVk);
+		    bufferInfos.push_back({ static_cast<VkBuffer>(bufferVk->GetNativeHandle()), info.Offset, info.Range });
 		    write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-		    write.pBufferInfo = bufferInfos.data() + bufferInfos.size() - 1;
-		     */
+		    write.pBufferInfo	 = bufferInfos.data() + bufferInfos.size() - 1;
+
 		    break;
 		}
 		default:
@@ -262,14 +261,13 @@ VulkanDescriptorSetPool::VulkanDescriptorSetPool(VkDevice device, uint32_t maxSe
 
     VulkanUtilities::checkResult(vkCreateDescriptorPool(m_device, &createInfo, nullptr, &m_descriptorPool));
 
-    // TODO:
-    //m_descriptorSetMemory = (char *)DefaultAllocator::get()->allocate(sizeof(DescriptorSetVk) * m_poolSize, alignof(DescriptorSetVk), 0);
+    m_descriptorSetMemory = static_cast<char*>(DefaultAllocator::Get()->allocate(sizeof(VulkanDescriptorSet) * m_poolSize, alignof(VulkanDescriptorSet), 0));
 }
 VulkanDescriptorSetPool::~VulkanDescriptorSetPool()
 {
     vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr);
 
-    // TODO: DefaultAllocator::get()->deallocate(m_descriptorSetMemory, sizeof(DescriptorSetVk) * m_poolSize);
+    DefaultAllocator::Get()->deallocate(m_descriptorSetMemory, sizeof(VulkanDescriptorSet) * m_poolSize);
     delete m_descriptorSetMemory;
     m_descriptorSetMemory = nullptr;
 }

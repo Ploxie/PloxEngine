@@ -5,6 +5,8 @@
 #pragma once
 #include "eastl/vector.h"
 #include "rendering/GraphicsAdapter.h"
+#include "rendering/types/DescriptorSet.h"
+#include "utility/memory/PoolAllocator.h"
 #include "VulkanFrameBufferDescription.h"
 #include "VulkanInstanceProperties.h"
 #include "VulkanQueue.h"
@@ -14,6 +16,7 @@
 class VulkanSwapchain;
 class Window;
 class VulkanRenderPassCache;
+class VulkanMemoryAllocator;
 
 #undef CreateSemaphore
 
@@ -33,12 +36,19 @@ public:
     explicit VulkanGraphicsAdapter(void* windowHandle, bool debugLayer);
     ~VulkanGraphicsAdapter() override;
 
+    void CreateGraphicsPipeline(uint32_t count, const GraphicsPipelineCreateInfo* createInfo, GraphicsPipeline** pipelines) override;
+    void CreateCommandPool(const Queue* queue, CommandPool** commandPool) override;
     void CreateSwapchain(const Queue* presentQueue, unsigned int width, unsigned int height, Window* window, PresentMode presentMode, Swapchain** swapchain) override;
     void CreateSemaphore(uint64_t initialValue, Semaphore** semaphore) override;
+    void CreateImageView(const ImageViewCreateInfo& imageViewCreateInfo, ImageView** imageView) override;
+    void CreateImageView(Image* image, ImageView** imageView) override;
+    void CreateDescriptorSetPool(uint32_t maxSets, const DescriptorSetLayout* descriptorSetLayout, DescriptorSetPool** descriptorSetPool) override;
+    void CreateDescriptorSetLayout(uint32_t bindingCount, const DescriptorSetLayoutBinding* bindings, DescriptorSetLayout** descriptorSetLayout) override;
 
     bool ActivateFullscreen(Window* window) override;
 
     VkDevice& GetDevice();
+    const VkPhysicalDeviceProperties& GetDeviceProperties() const;
     Queue* GetGraphicsQueue() override;
     Queue* GetComputeQueue() override;
     Queue* GetTransferQueue() override;
@@ -52,6 +62,7 @@ private:
     VkInstance m_instance			   = VK_NULL_HANDLE;
     VkDevice m_device				   = VK_NULL_HANDLE;
     VkPhysicalDevice m_physicalDevice		   = VK_NULL_HANDLE;
+    VkPhysicalDeviceProperties m_properties	   = {};
     VulkanQueue m_graphicsQueue			   = {};
     VulkanQueue m_computeQueue			   = {};
     VulkanQueue m_transferQueue			   = {};
@@ -60,7 +71,13 @@ private:
     VulkanRenderPassCache* m_renderPassCache	   = nullptr;
     VulkanFrameBufferCache* m_frameBufferCache	   = nullptr;
     VulkanSwapchain* m_swapchain		   = nullptr;
-    //DynamicPoolAllocator m_commandListPoolMemoryPool;
+    VulkanMemoryAllocator* m_allocator		   = nullptr;
+    DynamicPoolAllocator m_commandPoolMemoryPool;
+    DynamicPoolAllocator m_semaphoreMemoryPool;
+    DynamicPoolAllocator m_graphicsPipelineMemoryPool;
+    DynamicPoolAllocator m_descriptorSetPoolMemoryPool;
+    DynamicPoolAllocator m_descriptorSetLayoutMemoryPool;
+    DynamicPoolAllocator m_imageViewMemoryPool;
     bool m_dynamicRenderingExtensionSupport = false;
     bool m_supportsMemoryBudgetExtension    = false;
     bool m_fullscreenExclusiveSupported	    = false;

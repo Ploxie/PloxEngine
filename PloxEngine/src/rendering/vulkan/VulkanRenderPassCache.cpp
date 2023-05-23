@@ -2,7 +2,9 @@
 // Created by Ploxie on 2023-05-17.
 //
 #include "VulkanRenderPassCache.h"
+#include "volk.h"
 #include "VulkanUtilities.h"
+
 VulkanRenderPassCache::VulkanRenderPassCache(VkDevice device)
     : m_device(device)
 {
@@ -97,6 +99,7 @@ VkRenderPass VulkanRenderPassCache::GetRenderPass(const VulkanRenderPassDescript
 
     return pass;
 }
+
 size_t VulkanRenderPassDescriptionHash::operator()(const VulkanRenderPassDescription& value) const
 {
     return value.m_hashValue;

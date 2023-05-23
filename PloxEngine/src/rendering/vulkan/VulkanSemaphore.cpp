@@ -3,6 +3,7 @@
 // Created by Ploxie on 2023-05-11.
 //
 #include "vulkansemaphore.h"
+#include "volk.h"
 #include "VulkanUtilities.h"
 
 VulkanSemaphore::VulkanSemaphore(VkDevice device, uint64_t initialValue)

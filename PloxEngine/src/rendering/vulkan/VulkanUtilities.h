@@ -3,6 +3,8 @@
 //
 
 #pragma once
+#include "rendering/types/Barrier.h"
+#include "rendering/types/Command.h"
 #include "rendering/types/Format.h"
 #include "rendering/types/GraphicsPipeline.h"
 #include "vulkan/vulkan.h"
@@ -12,6 +14,7 @@ namespace VulkanUtilities
     VkResult checkResult(VkResult result, const char *errorMsg = nullptr, bool exitOnError = true);
 
     void Translate(DynamicStateFlags flags, uint32_t &stateCount, VkDynamicState states[9]);
+    VkShaderStageFlags Translate(ShaderStageFlags flags);
     VkColorComponentFlags Translate(ColorComponentFlags flags);
     VkBlendOp Translate(BlendOp blendOp);
     VkBlendFactor Translate(BlendFactor blendFactor);
@@ -24,5 +27,20 @@ namespace VulkanUtilities
     VkPrimitiveTopology Translate(PrimitiveTopology primitiveTopology);
     VkVertexInputRate Translate(VertexInputRate inputRate);
     VkFormat Translate(Format format);
+    Format Translate(VkFormat format);
+    VkImageViewType Translate(ImageViewType imageViewType);
+    VkComponentSwizzle Translate(ComponentSwizzle swizzle);
+    VkFilter Translate(Filter filter);
+    VkImageAspectFlags GetImageAspectMask(VkFormat format);
+    VkSamplerMipmapMode Translate(SamplerMipmapMode mipmapMode);
+    VkSamplerAddressMode Translate(SamplerAddressMode addressMode);
+    VkBorderColor Translate(BorderColor borderColor);
+    VkStencilFaceFlags Translate(StencilFaceFlags flags);
+    VkAttachmentLoadOp Translate(AttachmentLoadOp loadOp);
+    VkAttachmentStoreOp Translate(AttachmentStoreOp storeOp);
+    VkImageCreateFlags Translate(ImageCreateFlags flags);
+    VkPipelineStageFlags Translate(PipelineStageFlags flags);
+    VkImageUsageFlags Translate(ImageUsageFlags flags);
+    VkDescriptorBindingFlags Translate(DescriptorBindingFlags flags);
 
 } // namespace VulkanUtilities

@@ -140,6 +140,13 @@ bool TLSFAllocator::Allocate(uint32_t size, uint32_t alignment, uint32_t& chunkO
     return true;
 }
 
+void TLSFAllocator::GetFreeUsedWastedSizes(uint32_t& free, uint32_t& used, uint32_t& wasted) const
+{
+    free   = m_freeSize;
+    used   = m_usedSize;
+    wasted = m_memorySize - m_freeSize - m_usedSize;
+}
+
 void TLSFAllocator::AddChunkToFreeList(Chunk* chunk)
 {
     Chunk** list = nullptr;

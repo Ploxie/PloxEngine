@@ -62,18 +62,31 @@ void Engine::Initialize(int argc, char* argv[], GameLogic* gameLogic)
     Logger::Initialize();
     Platform::Initialize("PloxieApplication");
 
-    m_window = Platform::CreatePlatformWindow("TestWindow", 50, 50, 800, 600);
+    m_window = Platform::CreatePlatformWindow("TestWindow", -1, -1, 800, 600);
     m_renderer.Initialize(Platform::GetWindow(m_window), GraphicsBackendType::VULKAN);
 
     m_gameLogic->Initialize(this);
 
     m_isRunning = true;
 }
+
+static bool asd = false;
+
 bool Engine::Run()
 {
     m_isRunning = Platform::PumpMessages();
 
     m_gameLogic->Update(0.0F);
+
+    if(Input::IsKeyDown(Key::K))
+    {
+	if(!asd)
+	{
+	    Platform::GetWindow(m_window)->SetWindowMode(WindowMode::FULLSCREEN);
+	    asd = true;
+	}
+    }
+
     m_renderer.Render();
 
     return m_isRunning;

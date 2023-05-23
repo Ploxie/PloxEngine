@@ -9,6 +9,9 @@
 
 class Window;
 
+class CommandPool;
+class Command;
+
 class Renderer
 {
 public:
@@ -30,4 +33,9 @@ private:
     unsigned int m_frame	   = 0;
     unsigned int m_swapchainWidth  = 1;
     unsigned int m_swapchainHeight = 1;
+
+    CommandPool* m_commandPool;
+    Command* m_command;
+    DescriptorSet* m_descriptorSet;
+    GraphicsPipeline* m_pipeline;
 };

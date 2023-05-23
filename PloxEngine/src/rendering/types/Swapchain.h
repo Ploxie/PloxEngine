@@ -10,6 +10,7 @@
 #include "Semaphore.h"
 
 class Window;
+class Command;
 
 enum class PresentMode
 {
@@ -25,7 +26,7 @@ public:
     virtual void Resize(uint32_t width, uint32_t height, Window* window, PresentMode presentMode) = 0;
     virtual unsigned int GetCurrentImageIndex()							  = 0;
     virtual void Present(Semaphore* waitSemaphore, uint64_t semaphoreWaitValue, Semaphore* signalSemaphore,
-			 uint64_t semaphoreSignalValue)						  = 0;
+			 uint64_t semaphoreSignalValue, Command* command)			  = 0;
     virtual Extent2D GetExtent() const								  = 0;
     virtual Extent2D GetRecreationExtent() const						  = 0;
     virtual Format GetImageFormat() const							  = 0;

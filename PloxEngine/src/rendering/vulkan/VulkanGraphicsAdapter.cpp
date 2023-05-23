@@ -2,14 +2,20 @@
 // Created by Ploxie on 2023-05-09.
 //
 #include "VulkanGraphicsAdapter.h"
-#include "core/assert.h"
+#include "core/Assert.h"
 #include "core/logger.h"
 #include "eastl/string.h"
 #include "platform/window/Window.h"
+#include "volk.h"
+#include "VulkanCommandPool.h"
+#include "VulkanDescriptorSet.h"
 #include "VulkanDeviceInfo.h"
 #include "VulkanFrameBufferCache.h"
+#include "VulkanGraphicsPipeline.h"
+#include "VulkanMemoryAllocator.h"
 #include "VulkanRenderPassCache.h"
 #include "VulkanSwapchain.h"
+#include "VulkanUtilities.h"
 
 #undef CreateSemaphore
 
@@ -37,7 +43,18 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
 }
 
 VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer)
+    : m_semaphoreMemoryPool(sizeof(VulkanSemaphore), 16, "VulkanSemaphore Pool Allocator"),
+      m_commandPoolMemoryPool(sizeof(VulkanCommandPool), 32, "VulkanCommandPool Pool Allocator"),
+      m_graphicsPipelineMemoryPool(sizeof(VulkanGraphicsPipeline), 64, "VulkanGraphicsPipeline Pool Allocator"),
+      m_imageViewMemoryPool(sizeof(VulkanImageView), 1024, "VulkanImageView Pool Allocator"),
+      m_descriptorSetPoolMemoryPool(sizeof(VulkanDescriptorSetPool), 16, "VulkanDescriptorSetPool Pool Allocator"),
+      m_descriptorSetLayoutMemoryPool(sizeof(VulkanDescriptorSetLayout), 16, "VulkanDescriptorSetLayout Pool Allocator")
 {
+    if(volkInitialize() != VK_SUCCESS)
+    {
+	LOG_CORE_CRITICAL("Failed to initialize volk!");
+    }
+
     // Create Vulkan Instance
     {
 	VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
@@ -80,6 +97,8 @@ VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer
 	    return;
 	}
     }
+
+    volkLoadInstance(m_instance);
 
     // Create debug callback
     {
@@ -309,8 +328,11 @@ VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer
 	// Enabled Non-Required Extensions
 	{
 	    m_fullscreenExclusiveSupported     = selectedDevice.AddExtension("VK_EXT_full_screen_exclusive");
-	    m_dynamicRenderingExtensionSupport = selectedDevice.HasFeatures(requiredDynamicRenderingFeatures);
+	    m_supportsMemoryBudgetExtension    = selectedDevice.AddExtension(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
+	    m_dynamicRenderingExtensionSupport = selectedDevice.HasFeatures(requiredDynamicRenderingFeatures) && selectedDevice.AddExtension(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
 	}
+
+	m_properties = selectedDevice.GetProperties();
 
 	// Enabled features
 	auto deviceFeatures	      = requiredFeatures;
@@ -351,7 +373,7 @@ VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer
 
 	LOG_CORE_INFO("Logical Device Created ({0})", selectedDevice.GetProperties().deviceName);
 
-	s_vkSetDebugUtilsObjectName = (PFN_vkSetDebugUtilsObjectNameEXT) vkGetDeviceProcAddr(m_device, "vkSetDebugUtilsObjectNameEXT");
+	s_vkSetDebugUtilsObjectName = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetDeviceProcAddr(m_device, "vkSetDebugUtilsObjectNameEXT"));
 
 	Vulkan::InitializePlatform(m_instance, m_device);
 
@@ -376,13 +398,32 @@ VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer
 	}
     }
 
+    volkLoadDevice(m_device);
+
     m_renderPassCache  = new VulkanRenderPassCache(m_device);
     m_frameBufferCache = new VulkanFrameBufferCache(m_device);
+    m_allocator	       = new VulkanMemoryAllocator();
+    m_allocator->Initialize(m_device, m_physicalDevice, m_supportsMemoryBudgetExtension);
 }
 
 VulkanGraphicsAdapter::~VulkanGraphicsAdapter()
 {
     delete m_renderPassCache;
+}
+
+void VulkanGraphicsAdapter::CreateGraphicsPipeline(uint32_t count, const GraphicsPipelineCreateInfo* createInfo, GraphicsPipeline** pipelines)
+{
+    for(uint32_t i = 0; i < count; ++i)
+    {
+	pipelines[i] = ALLOC_NEW(&m_graphicsPipelineMemoryPool, VulkanGraphicsPipeline)(this, createInfo[i]);
+    }
+}
+
+void VulkanGraphicsAdapter::CreateCommandPool(const Queue* queue, CommandPool** commandPool)
+{
+    const auto* queueVk = dynamic_cast<const VulkanQueue*>(queue);
+    ASSERT(queueVk);
+    *commandPool = ALLOC_NEW(&m_commandPoolMemoryPool, VulkanCommandPool)(this, *queueVk);
 }
 
 void VulkanGraphicsAdapter::CreateSwapchain(const Queue* presentQueue, unsigned int width, unsigned int height, Window* window, PresentMode presentMode, Swapchain** swapchain)
@@ -401,7 +442,116 @@ void VulkanGraphicsAdapter::CreateSwapchain(const Queue* presentQueue, unsigned 
 
 void VulkanGraphicsAdapter::CreateSemaphore(uint64_t initialValue, Semaphore** semaphore)
 {
-    *semaphore = new VulkanSemaphore(m_device, initialValue); // TODO: ALLOCATOR
+    *semaphore = ALLOC_NEW(&m_semaphoreMemoryPool, VulkanSemaphore)(m_device, initialValue);
+}
+
+void VulkanGraphicsAdapter::CreateImageView(const ImageViewCreateInfo& imageViewCreateInfo, ImageView** imageView)
+{
+    *imageView = ALLOC_NEW(&m_imageViewMemoryPool, VulkanImageView)(m_device, imageViewCreateInfo);
+}
+
+void VulkanGraphicsAdapter::CreateImageView(Image* image, ImageView** imageView)
+{
+    const auto& imageDesc = image->GetDescription();
+
+    ImageViewCreateInfo imageViewCreateInfo = {};
+    {
+	imageViewCreateInfo.Image	   = image;
+	imageViewCreateInfo.ViewType	   = static_cast<ImageViewType>(imageDesc.ImageType);
+	imageViewCreateInfo.Format	   = imageDesc.Format;
+	imageViewCreateInfo.Components	   = {};
+	imageViewCreateInfo.BaseMipLevel   = 0;
+	imageViewCreateInfo.LevelCount	   = imageDesc.Levels;
+	imageViewCreateInfo.BaseArrayLayer = 0;
+	imageViewCreateInfo.LayerCount	   = imageDesc.Layers;
+    }
+
+    // array view
+    if(imageViewCreateInfo.ViewType != ImageViewType::CUBE && imageViewCreateInfo.LayerCount > 1 || imageViewCreateInfo.LayerCount > 6)
+    {
+	ImageViewType arrayType = imageViewCreateInfo.ViewType;
+	switch(imageViewCreateInfo.ViewType)
+	{
+	    case ImageViewType::_1D:
+		arrayType = ImageViewType::_1D_ARRAY;
+		break;
+	    case ImageViewType::_2D:
+		arrayType = ImageViewType::_2D_ARRAY;
+		break;
+	    case ImageViewType::_3D:
+		// 3d images dont support arrays
+		ASSERT(false);
+		break;
+	    case ImageViewType::CUBE:
+		arrayType = ImageViewType::CUBE_ARRAY;
+		break;
+	    default:
+		assert(false);
+		break;
+	}
+
+	imageViewCreateInfo.ViewType = arrayType;
+    }
+
+    CreateImageView(imageViewCreateInfo, imageView);
+}
+
+void VulkanGraphicsAdapter::CreateDescriptorSetPool(uint32_t maxSets, const DescriptorSetLayout* descriptorSetLayout, DescriptorSetPool** descriptorSetPool)
+{
+    const auto* layoutVk = dynamic_cast<const VulkanDescriptorSetLayout*>(descriptorSetLayout);
+    assert(layoutVk);
+
+    *descriptorSetPool = ALLOC_NEW(&m_descriptorSetPoolMemoryPool, VulkanDescriptorSetPool)(m_device, maxSets, layoutVk);
+}
+
+void VulkanGraphicsAdapter::CreateDescriptorSetLayout(uint32_t bindingCount, const DescriptorSetLayoutBinding* bindings, DescriptorSetLayout** descriptorSetLayout)
+{
+    VkDescriptorSetLayoutBinding* bindingsVk = STACK_ALLOC_T(VkDescriptorSetLayoutBinding, bindingCount);
+    VkDescriptorBindingFlags* bindingFlagsVk = STACK_ALLOC_T(VkDescriptorBindingFlags, bindingCount);
+
+    for(uint32_t i = 0; i < bindingCount; ++i)
+    {
+	const auto& b		= bindings[i];
+	VkDescriptorType typeVk = VK_DESCRIPTOR_TYPE_SAMPLER;
+	switch(b.DescriptorType)
+	{
+	    case DescriptorType::SAMPLER:
+		typeVk = VK_DESCRIPTOR_TYPE_SAMPLER;
+		break;
+	    case DescriptorType::TEXTURE:
+		typeVk = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+		break;
+	    case DescriptorType::RW_TEXTURE:
+		typeVk = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		break;
+	    case DescriptorType::TYPED_BUFFER:
+		typeVk = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+		break;
+	    case DescriptorType::RW_TYPED_BUFFER:
+		typeVk = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+		break;
+	    case DescriptorType::CONSTANT_BUFFER:
+		typeVk = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		break;
+	    case DescriptorType::BYTE_BUFFER:
+	    case DescriptorType::RW_BYTE_BUFFER:
+	    case DescriptorType::STRUCTURED_BUFFER:
+	    case DescriptorType::RW_STRUCTURED_BUFFER:
+		typeVk = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		break;
+	    case DescriptorType::OFFSET_CONSTANT_BUFFER:
+		typeVk = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+		break;
+	    default:
+		assert(false);
+		break;
+	}
+
+	bindingFlagsVk[i] = VulkanUtilities::Translate(b.BindingFlags);
+	bindingsVk[i]	  = { b.Binding, typeVk, b.DescriptorCount, VulkanUtilities::Translate(b.StageFlags), nullptr };
+    }
+
+    *descriptorSetLayout = ALLOC_NEW(&m_descriptorSetLayoutMemoryPool, VulkanDescriptorSetLayout)(m_device, bindingCount, bindingsVk, bindingFlagsVk);
 }
 
 bool VulkanGraphicsAdapter::ActivateFullscreen(Window* window)
@@ -418,6 +568,11 @@ bool VulkanGraphicsAdapter::ActivateFullscreen(Window* window)
 VkDevice& VulkanGraphicsAdapter::GetDevice()
 {
     return m_device;
+}
+
+const VkPhysicalDeviceProperties& VulkanGraphicsAdapter::GetDeviceProperties() const
+{
+    return m_properties;
 }
 
 Queue* VulkanGraphicsAdapter::GetGraphicsQueue()

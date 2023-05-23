@@ -23,6 +23,8 @@ class TLSFAllocator
 public:
     explicit TLSFAllocator(uint32_t memorySize, uint32_t pageSize);
     bool Allocate(uint32_t size, uint32_t alignment, uint32_t& chunkOffset, void*& backingChunk);
+    void Free(void* backingChunk);
+    void GetFreeUsedWastedSizes(uint32_t& free, uint32_t& used, uint32_t& wasted) const;
 
 private:
     struct Chunk;

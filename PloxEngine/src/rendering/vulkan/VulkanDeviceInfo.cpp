@@ -4,6 +4,7 @@
 #include "VulkanDeviceInfo.h"
 #include "core/Assert.h"
 #include "core/Logger.h"
+#include "volk.h"
 #include "VulkanUtilities.h"
 
 VulkanDeviceInfo::VulkanDeviceInfo(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)

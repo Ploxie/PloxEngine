@@ -4,6 +4,7 @@
 #include "VulkanInstanceProperties.h"
 #include "core/Assert.h"
 #include "core/Logger.h"
+#include "volk.h"
 #include "VulkanUtilities.h"
 
 VulkanInstanceProperties::VulkanInstanceProperties()

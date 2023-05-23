@@ -45,36 +45,36 @@ DEF_ENUM_FLAG_OPERATORS(ImageUsageFlags);
 
 union ClearColorValue
 {
-    float m_f3232[4];
-    int32_t m_int32[4];
-    uint32_t m_uint32[4];
+    float F3232[4];
+    int32_t Int32[4];
+    uint32_t Uint32[4];
 };
 
 struct ClearDepthStencilValue
 {
-    float m_depth;
-    uint32_t m_stencil;
+    float Depth;
+    uint32_t Stencil;
 };
 
 union ClearValue
 {
-    ClearColorValue m_color;
-    ClearDepthStencilValue m_depthStencil;
+    ClearColorValue Color;
+    ClearDepthStencilValue DepthStencil;
 };
 
 struct ImageCreateInfo
 {
-    uint32_t m_width		   = 1;
-    uint32_t m_height		   = 1;
-    uint32_t m_depth		   = 1;
-    uint32_t m_levels		   = 1;
-    uint32_t m_layers		   = 1;
-    SampleCount m_samples	   = SampleCount::_1;
-    ImageType m_imageType	   = ImageType::_2D;
-    Format m_format		   = Format::UNDEFINED;
-    ImageCreateFlags m_createFlags = static_cast<ImageCreateFlags>(0);
-    ImageUsageFlags m_usageFlags   = static_cast<ImageUsageFlags>(0);
-    ClearValue m_optimizedClearValue;
+    uint32_t Width		 = 1;
+    uint32_t Height		 = 1;
+    uint32_t Depth		 = 1;
+    uint32_t Levels		 = 1;
+    uint32_t Layers		 = 1;
+    SampleCount Samples		 = SampleCount::_1;
+    ImageType ImageType		 = ImageType::_2D;
+    Format Format		 = Format::UNDEFINED;
+    ImageCreateFlags CreateFlags = static_cast<ImageCreateFlags>(0);
+    ImageUsageFlags UsageFlags	 = static_cast<ImageUsageFlags>(0);
+    ClearValue OptimizedClearValue;
 };
 
 class Image

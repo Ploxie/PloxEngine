@@ -3,6 +3,7 @@
 //
 
 #include "VulkanFrameBufferCache.h"
+#include "volk.h"
 #include "VulkanUtilities.h"
 
 VulkanFrameBufferCache::VulkanFrameBufferCache(VkDevice device)
@@ -63,4 +64,9 @@ VkFramebuffer VulkanFrameBufferCache::GetFrameBuffer(const VulkanFrameBufferDesc
     VulkanUtilities::checkResult(vkCreateFramebuffer(m_device, &frameBufferCreateInfo, nullptr, &frameBuffer));
 
     return frameBuffer;
+}
+
+size_t VulkanFrameBufferDescriptionHash::operator()(const VulkanFrameBufferDescription& value) const
+{
+    return value.m_hashValue;
 }

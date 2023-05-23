@@ -7,12 +7,12 @@
 
 struct Extent2D
 {
-    uint32_t m_width;
-    uint32_t m_height;
+    uint32_t Width;
+    uint32_t Height;
 };
 
 struct Offset2D
 {
-    int32_t m_x;
-    int32_t m_y;
+    int32_t X;
+    int32_t Y;
 };

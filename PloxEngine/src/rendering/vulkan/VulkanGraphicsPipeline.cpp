@@ -2,6 +2,9 @@
 // Created by Ploxie on 2023-05-17.
 //
 #include "VulkanGraphicsPipeline.h"
+#include "platform/Platform.h"
+#include "volk.h"
+#include "VulkanDescriptorSet.h"
 #include "VulkanGraphicsAdapter.h"
 #include "VulkanRenderPassDescription.h"
 #include "VulkanUtilities.h"
@@ -66,7 +69,7 @@ VulkanGraphicsPipeline::VulkanGraphicsPipeline(VulkanGraphicsAdapter* adapter, c
 	pipelineRenderingCreateInfo.colorAttachmentCount    = createInfo.AttachmentFormats.ColorAttachmentCount;
 	pipelineRenderingCreateInfo.pColorAttachmentFormats = colorAttachmentFormats;
 	pipelineRenderingCreateInfo.depthAttachmentFormat   = VulkanUtilities::Translate(createInfo.AttachmentFormats.DepthStencilFormat);
-	pipelineRenderingCreateInfo.stencilAttachmentFormat = pipelineRenderingCreateInfo.depthAttachmentFormat;
+	pipelineRenderingCreateInfo.stencilAttachmentFormat = pipelineRenderingCreateInfo.stencilAttachmentFormat;
     }
     else
     {
@@ -318,4 +321,130 @@ void VulkanGraphicsPipeline::BindStaticSamplerSet(VkCommandBuffer cmdBuffer) con
     {
 	vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, m_staticSamplerDescriptorSetIndex, 1, &m_staticSamplerDescriptorSet, 0, nullptr);
     }
+}
+
+static void CreateShaderStage(VkDevice device, const ShaderStageCreateInfo& stageDesc, VkShaderStageFlagBits stageFlag, VkShaderModule& shaderModule, VkPipelineShaderStageCreateInfo& stageCreateInfo)
+{
+    char path[ShaderStageCreateInfo::MAX_PATH_LENGTH + 5];
+    strcpy_s(path, stageDesc.Path);
+    strcat_s(path, ".spv");
+    size_t codeSize = Platform::Size(path);
+    char* code	    = new char[codeSize];
+    Platform::ReadFile(path, codeSize, code, true);
+    VkShaderModuleCreateInfo createInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
+    createInfo.codeSize			= codeSize;
+    createInfo.pCode			= reinterpret_cast<const uint32_t*>(code);
+
+    VulkanUtilities::checkResult(vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule), "Failed to create shader module!");
+
+    delete[] code;
+
+    stageCreateInfo	   = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+    stageCreateInfo.stage  = stageFlag;
+    stageCreateInfo.module = shaderModule;
+    stageCreateInfo.pName  = "main";
+}
+
+static void CreatePipelineLayout(
+    VkDevice device,
+    const PipelineLayoutCreateInfo& layoutCreateInfo,
+    VkPipelineLayout& pipelineLayout,
+    VkDescriptorSetLayout& staticSamplerDescriptorSetLayout,
+    VkDescriptorPool& staticSamplerDescriptorPool,
+    VkDescriptorSet& staticSamplerDescriptorSet,
+    eastl::fixed_vector<VkSampler, 16>& staticSamplers)
+{
+    staticSamplerDescriptorSetLayout = VK_NULL_HANDLE;
+    staticSamplerDescriptorPool	     = VK_NULL_HANDLE;
+    staticSamplerDescriptorSet	     = VK_NULL_HANDLE;
+    staticSamplers.clear();
+
+    // create static sampler set
+    if(layoutCreateInfo.StaticSamplerCount > 0)
+    {
+	staticSamplers.reserve(layoutCreateInfo.StaticSamplerCount);
+	eastl::fixed_vector<VkDescriptorSetLayoutBinding, 16> staticSamplerBindings;
+	staticSamplerBindings.reserve(layoutCreateInfo.StaticSamplerCount);
+
+	for(size_t i = 0; i < layoutCreateInfo.StaticSamplerCount; ++i)
+	{
+	    const auto& staticSamplerDesc = layoutCreateInfo.StaticSamplerDescriptions[i];
+
+	    VkSamplerCreateInfo samplerCreateInfoVk { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+	    samplerCreateInfoVk.magFilter		= VulkanUtilities::Translate(staticSamplerDesc.MagFilter);
+	    samplerCreateInfoVk.minFilter		= VulkanUtilities::Translate(staticSamplerDesc.MinFilter);
+	    samplerCreateInfoVk.mipmapMode		= VulkanUtilities::Translate(staticSamplerDesc.MipmapMode);
+	    samplerCreateInfoVk.addressModeU		= VulkanUtilities::Translate(staticSamplerDesc.AddressModeU);
+	    samplerCreateInfoVk.addressModeV		= VulkanUtilities::Translate(staticSamplerDesc.AddressModeV);
+	    samplerCreateInfoVk.addressModeW		= VulkanUtilities::Translate(staticSamplerDesc.AddressModeW);
+	    samplerCreateInfoVk.mipLodBias		= staticSamplerDesc.MipLodBias;
+	    samplerCreateInfoVk.anisotropyEnable	= staticSamplerDesc.AnisotropyEnable;
+	    samplerCreateInfoVk.maxAnisotropy		= staticSamplerDesc.MaxAnisotropy;
+	    samplerCreateInfoVk.compareEnable		= staticSamplerDesc.CompareEnable;
+	    samplerCreateInfoVk.compareOp		= VulkanUtilities::Translate(staticSamplerDesc.CompareOp);
+	    samplerCreateInfoVk.minLod			= staticSamplerDesc.MinLod;
+	    samplerCreateInfoVk.maxLod			= staticSamplerDesc.MaxLod;
+	    samplerCreateInfoVk.borderColor		= VulkanUtilities::Translate(staticSamplerDesc.BorderColor);
+	    samplerCreateInfoVk.unnormalizedCoordinates = staticSamplerDesc.UnnormalizedCoordinates;
+
+	    VkSampler sampler = {};
+	    VulkanUtilities::checkResult(vkCreateSampler(device, &samplerCreateInfoVk, nullptr, &sampler), "Failed to create Sampler!");
+	    staticSamplers.push_back(sampler);
+
+	    VkDescriptorSetLayoutBinding bindingVk {};
+	    bindingVk.binding		 = staticSamplerDesc.Binding;
+	    bindingVk.descriptorType	 = VK_DESCRIPTOR_TYPE_SAMPLER;
+	    bindingVk.descriptorCount	 = 1;
+	    bindingVk.stageFlags	 = VulkanUtilities::Translate(staticSamplerDesc.StageFlags);
+	    bindingVk.pImmutableSamplers = &staticSamplers.back();
+
+	    staticSamplerBindings.push_back(bindingVk);
+	}
+
+	VkDescriptorSetLayoutCreateInfo samplerSetLayoutCreateInfo { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+	samplerSetLayoutCreateInfo.bindingCount = layoutCreateInfo.StaticSamplerCount;
+	samplerSetLayoutCreateInfo.pBindings	= staticSamplerBindings.data();
+
+	VulkanUtilities::checkResult(vkCreateDescriptorSetLayout(device, &samplerSetLayoutCreateInfo, nullptr, &staticSamplerDescriptorSetLayout), "Failed to create static sampler descriptor set layout!");
+
+	VkDescriptorPoolSize descriptorPoolSize { VK_DESCRIPTOR_TYPE_SAMPLER, layoutCreateInfo.StaticSamplerCount };
+	VkDescriptorPoolCreateInfo staticSamplerDescriptorPoolCreateInfo { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
+	staticSamplerDescriptorPoolCreateInfo.maxSets	    = 1;
+	staticSamplerDescriptorPoolCreateInfo.poolSizeCount = 1;
+	staticSamplerDescriptorPoolCreateInfo.pPoolSizes    = &descriptorPoolSize;
+
+	VulkanUtilities::checkResult(vkCreateDescriptorPool(device, &staticSamplerDescriptorPoolCreateInfo, nullptr, &staticSamplerDescriptorPool), "Failed to create static sampler descriptor pool!");
+
+	VkDescriptorSetAllocateInfo staticSamplerDescriptorSetAllocateInfo { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+	staticSamplerDescriptorSetAllocateInfo.descriptorPool	  = staticSamplerDescriptorPool;
+	staticSamplerDescriptorSetAllocateInfo.descriptorSetCount = 1;
+	staticSamplerDescriptorSetAllocateInfo.pSetLayouts	  = &staticSamplerDescriptorSetLayout;
+
+	VulkanUtilities::checkResult(vkAllocateDescriptorSets(device, &staticSamplerDescriptorSetAllocateInfo, &staticSamplerDescriptorSet), "Failed to allocate static sampler descriptor set!");
+    }
+
+    VkDescriptorSetLayout layoutsVk[5];
+    for(size_t i = 0; i < layoutCreateInfo.DescriptorSetLayoutCount; ++i)
+    {
+	auto* layoutVk = dynamic_cast<VulkanDescriptorSetLayout*>(layoutCreateInfo.DescriptorSetLayoutDeclarations[i].Layout);
+	assert(layoutVk);
+	layoutsVk[i] = static_cast<VkDescriptorSetLayout>(layoutVk->GetNativeHandle());
+    }
+    if(staticSamplerDescriptorSetLayout != VK_NULL_HANDLE)
+    {
+	layoutsVk[layoutCreateInfo.StaticSamplerSet] = staticSamplerDescriptorSetLayout;
+    }
+
+    VkPushConstantRange pushConstantRange;
+    pushConstantRange.stageFlags = VulkanUtilities::Translate(layoutCreateInfo.PushConstStageFlags);
+    pushConstantRange.offset	 = 0;
+    pushConstantRange.size	 = layoutCreateInfo.PushConstRange;
+
+    VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+    pipelineLayoutCreateInfo.setLayoutCount	    = (staticSamplerDescriptorSetLayout != VK_NULL_HANDLE) ? (layoutCreateInfo.DescriptorSetLayoutCount + 1) : layoutCreateInfo.DescriptorSetLayoutCount;
+    pipelineLayoutCreateInfo.pSetLayouts	    = layoutsVk;
+    pipelineLayoutCreateInfo.pushConstantRangeCount = layoutCreateInfo.PushConstRange > 0 ? 1 : 0;
+    pipelineLayoutCreateInfo.pPushConstantRanges    = layoutCreateInfo.PushConstRange > 0 ? &pushConstantRange : nullptr;
+
+    VulkanUtilities::checkResult(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout), "Failed to create PipelineLayout!");
 }

@@ -5,6 +5,7 @@
 #ifdef _WIN32
     #include "core/Assert.h"
     #include "platform/Platform.h"
+    #include "rendering/vulkan/volk.h"
     #include "rendering/vulkan/VulkanGraphicsAdapter.h"
     #include "rendering/vulkan/VulkanSwapchain.h"
     #include "rendering/vulkan/VulkanUtilities.h"

@@ -16,19 +16,20 @@ public:
     {
 
 
-        LOG_INFO("Game Initialized");
+		LOG_INFO("Game Initialized");
     }
     void Update(float deltaTime) noexcept override
     {
 		static int i;
-        if(Input::IsKeyDown(Key::U, true))
-        {
-           LOG_TRACE("{0}", i++);
-        }
+		if(Input::IsKeyDown(Key::U, true))
+		{
+			LOG_TRACE("{0}", i++);
+		}
+
     }
     void Shutdown() noexcept override
     {
-        LOG_INFO("Game Shutdown");
+		LOG_INFO("Game Shutdown");
     }
 };
 
