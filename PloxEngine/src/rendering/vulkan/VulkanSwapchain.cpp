@@ -214,8 +214,7 @@ uint32_t VulkanSwapchain::AcquireNextImageIndex()
     return m_currentImageIndex;
 }
 
-void VulkanSwapchain::Present(Semaphore* waitSemaphore, uint64_t semaphoreWaitValue, Semaphore* signalSemaphore,
-			      uint64_t semaphoreSignalValue, Command* command)
+void VulkanSwapchain::Present(Semaphore* waitSemaphore, uint64_t semaphoreWaitValue, Semaphore* signalSemaphore, uint64_t semaphoreSignalValue)
 {
     const uint32_t resIdx = m_frameIndex % BACKBUFFER_COUNT;
 

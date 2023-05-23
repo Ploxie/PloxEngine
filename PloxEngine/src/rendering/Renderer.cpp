@@ -128,7 +128,7 @@ void Renderer::Render() noexcept
 
     m_graphicsAdapter->GetGraphicsQueue()->Submit(1, &submitInfo);
 
-    m_swapchain->Present(m_semaphores[0], m_semaphoreValues[0], m_semaphores[0], m_semaphoreValues[0] + 1, m_command);
+    m_swapchain->Present(m_semaphores[0], m_semaphoreValues[0], m_semaphores[0], m_semaphoreValues[0] + 1);
     m_semaphoreValues[0]++;
 
     m_commandPool->Reset();

@@ -5,6 +5,7 @@
 #include "core/Assert.h"
 #include "rendering/RenderUtilities.h"
 #include "rendering/types/Barrier.h"
+#include "rendering/types/Buffer.h"
 #include "utility/memory/DefaultAllocator.h"
 #include "volk.h"
 #include "VulkanGraphicsAdapter.h"

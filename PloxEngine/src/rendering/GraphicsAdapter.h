@@ -17,6 +17,7 @@ class ImageView;
 class DescriptorSetLayout;
 class DescriptorSetPool;
 struct DescriptorSetLayoutBinding;
+class ImageViewCreateInfo;
 
 enum class GraphicsBackendType
 {
@@ -36,7 +37,7 @@ public:
     virtual void CreateCommandPool(const Queue* queue, CommandPool** commandPool)										     = 0;
     virtual void CreateSwapchain(const Queue* presentQueue, unsigned int width, unsigned int height, Window* window, PresentMode presentMode, Swapchain** swapchain) = 0;
     virtual void CreateSemaphore(uint64_t initialValue, Semaphore** semaphore)											     = 0;
-    virtual void CreateImageView(const ImageViewCreateInfo& imageViewCreateInfo, ImageView** imageView)								     = 0;
+    virtual void CreateImageView(const ImageViewCreateInfo* imageViewCreateInfo, ImageView** imageView)								     = 0;
     virtual void CreateImageView(Image* image, ImageView** imageView)												     = 0;
     virtual void CreateDescriptorSetPool(uint32_t maxSets, const DescriptorSetLayout* descriptorSetLayout, DescriptorSetPool** descriptorSetPool)		     = 0;
     virtual void CreateDescriptorSetLayout(uint32_t bindingCount, const DescriptorSetLayoutBinding* bindings, DescriptorSetLayout** descriptorSetLayout)	     = 0;

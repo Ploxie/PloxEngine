@@ -40,7 +40,7 @@ public:
     void CreateCommandPool(const Queue* queue, CommandPool** commandPool) override;
     void CreateSwapchain(const Queue* presentQueue, unsigned int width, unsigned int height, Window* window, PresentMode presentMode, Swapchain** swapchain) override;
     void CreateSemaphore(uint64_t initialValue, Semaphore** semaphore) override;
-    void CreateImageView(const ImageViewCreateInfo& imageViewCreateInfo, ImageView** imageView) override;
+    void CreateImageView(const ImageViewCreateInfo* imageViewCreateInfo, ImageView** imageView) override;
     void CreateImageView(Image* image, ImageView** imageView) override;
     void CreateDescriptorSetPool(uint32_t maxSets, const DescriptorSetLayout* descriptorSetLayout, DescriptorSetPool** descriptorSetPool) override;
     void CreateDescriptorSetLayout(uint32_t bindingCount, const DescriptorSetLayoutBinding* bindings, DescriptorSetLayout** descriptorSetLayout) override;

@@ -19,7 +19,7 @@ public:
     ~VulkanSwapchain() override;
 
     void Resize(uint32_t width, uint32_t height, Window* window, PresentMode presentMode) override;
-    void Present(Semaphore* waitSemaphore, uint64_t semaphoreWaitValue, Semaphore* signalSemaphore, uint64_t semaphoreSignalValue, Command* command) override;
+    void Present(Semaphore* waitSemaphore, uint64_t semaphoreWaitValue, Semaphore* signalSemaphore, uint64_t semaphoreSignalValue) override;
 
     uint32_t GetCurrentImageIndex() override;
     void* GetNativeHandle() const override;

@@ -5,6 +5,8 @@
 #include "core/Assert.h"
 #include "EASTL/vector.h"
 #include "rendering/RenderUtilities.h"
+#include "rendering/types/BufferView.h"
+#include "rendering/types/Sampler.h"
 #include "utility/memory/DefaultAllocator.h"
 #include "volk.h"
 #include "VulkanBuffer.h"

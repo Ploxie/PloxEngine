@@ -6,6 +6,7 @@
 #include "core/logger.h"
 #include "eastl/string.h"
 #include "platform/window/Window.h"
+#include "rendering/types/ImageView.h"
 #include "volk.h"
 #include "VulkanCommandPool.h"
 #include "VulkanDescriptorSet.h"
@@ -445,9 +446,9 @@ void VulkanGraphicsAdapter::CreateSemaphore(uint64_t initialValue, Semaphore** s
     *semaphore = ALLOC_NEW(&m_semaphoreMemoryPool, VulkanSemaphore)(m_device, initialValue);
 }
 
-void VulkanGraphicsAdapter::CreateImageView(const ImageViewCreateInfo& imageViewCreateInfo, ImageView** imageView)
+void VulkanGraphicsAdapter::CreateImageView(const ImageViewCreateInfo* imageViewCreateInfo, ImageView** imageView)
 {
-    *imageView = ALLOC_NEW(&m_imageViewMemoryPool, VulkanImageView)(m_device, imageViewCreateInfo);
+    *imageView = ALLOC_NEW(&m_imageViewMemoryPool, VulkanImageView)(m_device, *imageViewCreateInfo);
 }
 
 void VulkanGraphicsAdapter::CreateImageView(Image* image, ImageView** imageView)
@@ -493,7 +494,7 @@ void VulkanGraphicsAdapter::CreateImageView(Image* image, ImageView** imageView)
 	imageViewCreateInfo.ViewType = arrayType;
     }
 
-    CreateImageView(imageViewCreateInfo, imageView);
+    CreateImageView(&imageViewCreateInfo, imageView);
 }
 
 void VulkanGraphicsAdapter::CreateDescriptorSetPool(uint32_t maxSets, const DescriptorSetLayout* descriptorSetLayout, DescriptorSetPool** descriptorSetPool)

@@ -6,6 +6,7 @@
 #include "DescriptorSet.h"
 #include "Extent2D.h"
 #include "Format.h"
+#include "Image.h"
 #include "utility/Enum.h"
 #include <cstdint>
 

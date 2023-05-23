@@ -7,6 +7,7 @@
 #include "rendering/types/Command.h"
 #include "rendering/types/Format.h"
 #include "rendering/types/GraphicsPipeline.h"
+#include "rendering/types/ImageView.h"
 #include "vulkan/vulkan.h"
 
 namespace VulkanUtilities

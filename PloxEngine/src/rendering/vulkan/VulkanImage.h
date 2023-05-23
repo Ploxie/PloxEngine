@@ -5,6 +5,7 @@
 #pragma once
 #include "rendering/types/DescriptorSet.h"
 #include "rendering/types/Image.h"
+#include "rendering/types/ImageView.h"
 #include "vulkan/vulkan.h"
 
 class VulkanImage : public Image
