@@ -231,6 +231,7 @@ uint32_t VulkanDescriptorSet::GetDynamicBufferCount() const
 {
     return m_dynamicBufferCount;
 }
+
 VulkanDescriptorSetPool::VulkanDescriptorSetPool(VkDevice device, uint32_t maxSets, const VulkanDescriptorSetLayout* layout)
     : m_device(device), m_descriptorPool(VK_NULL_HANDLE), m_layout(layout), m_poolSize(maxSets), m_currentOffset(), m_descriptorSetMemory()
 {
@@ -279,7 +280,7 @@ void* VulkanDescriptorSetPool::GetNativeHandle() const
 }
 void VulkanDescriptorSetPool::AllocateDescriptorSets(uint32_t count, DescriptorSet** sets)
 {
-    ASSERT_MSG(m_currentOffset + count > m_poolSize, "Tried to allocate more descriptor sets from descriptor set pool than available!")
+    ASSERT_MSG(m_currentOffset + count <= m_poolSize, "Tried to allocate more descriptor sets from descriptor set pool than available!")
 
     auto* layout		      = static_cast<VkDescriptorSetLayout>(m_layout->GetNativeHandle());
     const uint32_t dynamicBufferCount = m_layout->GetTypeCounts()[VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC];

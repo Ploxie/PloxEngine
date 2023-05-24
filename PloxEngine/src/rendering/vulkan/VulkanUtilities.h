@@ -4,6 +4,7 @@
 
 #pragma once
 #include "rendering/types/Barrier.h"
+#include "rendering/types/Buffer.h"
 #include "rendering/types/Command.h"
 #include "rendering/types/Format.h"
 #include "rendering/types/GraphicsPipeline.h"
@@ -29,7 +30,10 @@ namespace VulkanUtilities
     VkVertexInputRate Translate(VertexInputRate inputRate);
     VkFormat Translate(Format format);
     Format Translate(VkFormat format);
+    VkImageType Translate(ImageType imageType);
     VkImageViewType Translate(ImageViewType imageViewType);
+    VkBufferCreateFlags Translate(BufferCreateFlags flags);
+    VkBufferUsageFlags Translate(BufferUsageFlags flags);
     VkComponentSwizzle Translate(ComponentSwizzle swizzle);
     VkFilter Translate(Filter filter);
     VkImageAspectFlags GetImageAspectMask(VkFormat format);
@@ -40,6 +44,7 @@ namespace VulkanUtilities
     VkAttachmentLoadOp Translate(AttachmentLoadOp loadOp);
     VkAttachmentStoreOp Translate(AttachmentStoreOp storeOp);
     VkImageCreateFlags Translate(ImageCreateFlags flags);
+    VkMemoryPropertyFlags Translate(MemoryPropertyFlags flags);
     VkPipelineStageFlags Translate(PipelineStageFlags flags);
     VkImageUsageFlags Translate(ImageUsageFlags flags);
     VkDescriptorBindingFlags Translate(DescriptorBindingFlags flags);

@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "Extent2D.h"
 #include "Format.h"
 #include "utility/Utilities.h"
 #include <cstdint>
@@ -60,6 +61,19 @@ union ClearValue
 {
     ClearColorValue Color;
     ClearDepthStencilValue DepthStencil;
+};
+
+struct ImageCopy
+{
+    uint32_t m_srcMipLevel;
+    uint32_t m_srcBaseLayer;
+    uint32_t m_srcLayerCount;
+    Offset3D m_srcOffset;
+    uint32_t m_dstMipLevel;
+    uint32_t m_dstBaseLayer;
+    uint32_t m_dstLayerCount;
+    Offset3D m_dstOffset;
+    Extent3D m_extent;
 };
 
 struct ImageCreateInfo

@@ -277,6 +277,32 @@ void VulkanCommand::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t 
     vkCmdDraw(m_commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
+void VulkanCommand::CopyImage(const Image* srcImage, const Image* dstImage, uint32_t regionCount, const ImageCopy* regions)
+{
+    LinearAllocatorFrame linearAllocatorFrame(&m_allocator);
+
+    const VkImage srcImageVk		   = (VkImage) srcImage->GetNativeHandle();
+    const VkImage dstImageVk		   = (VkImage) dstImage->GetNativeHandle();
+    const VkImageAspectFlags srcAspectMask = VulkanUtilities::GetImageAspectMask(VulkanUtilities::Translate(srcImage->GetDescription().Format));
+    const VkImageAspectFlags dstAspectMask = VulkanUtilities::GetImageAspectMask(VulkanUtilities::Translate(dstImage->GetDescription().Format));
+
+    VkImageCopy* regionsVk = linearAllocatorFrame.AllocateArray<VkImageCopy>(regionCount);
+
+    for(size_t i = 0; i < regionCount; ++i)
+    {
+	const auto& region = regions[i];
+	regionsVk[i]	   = {
+		  { srcAspectMask, region.m_srcMipLevel, region.m_srcBaseLayer, region.m_srcLayerCount },
+		  *reinterpret_cast<const VkOffset3D*>(&region.m_srcOffset),
+		  { dstAspectMask, region.m_dstMipLevel, region.m_dstBaseLayer, region.m_dstLayerCount },
+		  *reinterpret_cast<const VkOffset3D*>(&region.m_dstOffset),
+		  *reinterpret_cast<const VkExtent3D*>(&region.m_extent),
+	};
+    }
+
+    vkCmdCopyImage(m_commandBuffer, srcImageVk, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImageVk, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, regionCount, regionsVk);
+}
+
 void VulkanCommand::ClearColorImage(const Image* image, const ClearColorValue* color, uint32_t rangeCount, const ImageSubresourceRange* ranges)
 {
     LinearAllocatorFrame allocatorFrame(&m_allocator);

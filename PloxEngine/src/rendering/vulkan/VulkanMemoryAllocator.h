@@ -39,7 +39,9 @@ class VulkanMemoryPool
 {
 public:
     void Initialize(VkDevice device, VkPhysicalDevice physicalDevice, uint32_t memoryType, uint32_t heapIndex, VkDeviceSize bufferImageGranularity, VkDeviceSize preferredBlockSize, VkDeviceSize* heapUsage, VkDeviceSize heapSizeLimit, bool useMemoryBudgetExtension);
+
     VkResult Allocate(VkDeviceSize size, VkDeviceSize alignment, VulkanAllocationInfo& allocationInfo);
+    void Free(VulkanAllocationInfo allocationInfo);
 
     VkResult MapMemory(size_t blockIndex, VkDeviceSize offset, void** data);
     void UnmapMemory(size_t blockIndex);
@@ -82,7 +84,15 @@ public:
     VulkanMemoryAllocator();
 
     void Initialize(VkDevice device, VkPhysicalDevice physicalDevice, bool useMemBudgetExt);
+
     VkResult Allocate(const VulkanAllocationCreateInfo& allocationCreateInfo, const VkMemoryRequirements& memoryRequirements, const VkMemoryDedicatedAllocateInfo* dedicatedAllocateInfo, VulkanAllocationHandle& allocationHandle);
+    void Free(VulkanAllocationHandle allocationHandle);
+
+    VkResult CreateImage(const VulkanAllocationCreateInfo& allocationCreateInfo, const VkImageCreateInfo& imageCreateInfo, VkImage& image, VulkanAllocationHandle& allocationHandle);
+    VkResult CreateBuffer(const VulkanAllocationCreateInfo& allocationCreateInfo, const VkBufferCreateInfo& bufferCreateInfo, VkBuffer& buffer, VulkanAllocationHandle& allocationHandle);
+
+    void DestroyImage(VkImage image, VulkanAllocationHandle allocationHandle);
+    void DestroyBuffer(VkBuffer buffer, VulkanAllocationHandle allocationHandle);
 
     VkResult MapMemory(VulkanAllocationHandle allocationHandle, void** data);
     void UnmapMemory(VulkanAllocationHandle allocationHandle);

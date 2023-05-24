@@ -4,7 +4,6 @@
 #include "VulkanUtilities.h"
 #include "core/Assert.h"
 #include "core/Logger.h"
-#include "rendering/types/Barrier.h"
 
 VkResult VulkanUtilities::checkResult(VkResult result, const char *errorMsg, bool exitOnError)
 {
@@ -20,12 +19,13 @@ VkResult VulkanUtilities::checkResult(VkResult result, const char *errorMsg, boo
     char msgBuffer[msgBufferLength];
     msgBuffer[0] = '\0';
 
-    if(errorMsg)
-    {
-	LOG_CORE_CRITICAL("{0}", msgBuffer);
-    }
-
     bool error = false;
+
+    const char* defaultMessage = " ";
+    if(!errorMsg)
+    {
+	errorMsg = defaultMessage;
+    }
 
     switch(result)
     {
@@ -42,119 +42,116 @@ VkResult VulkanUtilities::checkResult(VkResult result, const char *errorMsg, boo
 	case VK_INCOMPLETE:
 	    break;
 	case VK_ERROR_OUT_OF_HOST_MEMORY:
-	    strcat_s(msgBuffer, " VK_ERROR_OUT_OF_HOST_MEMORY\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_OUT_OF_HOST_MEMORY: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_OUT_OF_DEVICE_MEMORY:
-	    strcat_s(msgBuffer, " VK_ERROR_OUT_OF_DEVICE_MEMORY\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_OUT_OF_DEVICE_MEMORY: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_INITIALIZATION_FAILED:
-	    strcat_s(msgBuffer, " VK_ERROR_INITIALIZATION_FAILED\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_INITIALIZATION_FAILED: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_DEVICE_LOST:
-	    strcat_s(msgBuffer, " VK_ERROR_DEVICE_LOST\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_DEVICE_LOST: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_MEMORY_MAP_FAILED:
-	    strcat_s(msgBuffer, " VK_ERROR_MEMORY_MAP_FAILED\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_MEMORY_MAP_FAILED: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_LAYER_NOT_PRESENT:
-	    strcat_s(msgBuffer, " VK_ERROR_LAYER_NOT_PRESENT\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_LAYER_NOT_PRESENT: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_EXTENSION_NOT_PRESENT:
-	    strcat_s(msgBuffer, " VK_ERROR_EXTENSION_NOT_PRESENT\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_EXTENSION_NOT_PRESENT: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_FEATURE_NOT_PRESENT:
-	    strcat_s(msgBuffer, " VK_ERROR_FEATURE_NOT_PRESENT\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_FEATURE_NOT_PRESENT: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_INCOMPATIBLE_DRIVER:
-	    strcat_s(msgBuffer, " VK_ERROR_INCOMPATIBLE_DRIVER\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_INCOMPATIBLE_DRIVER: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_TOO_MANY_OBJECTS:
-	    strcat_s(msgBuffer, " VK_ERROR_TOO_MANY_OBJECTS\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_TOO_MANY_OBJECTS: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_FORMAT_NOT_SUPPORTED:
-	    strcat_s(msgBuffer, " VK_ERROR_FORMAT_NOT_SUPPORTED\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_FORMAT_NOT_SUPPORTED: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_FRAGMENTED_POOL:
-	    strcat_s(msgBuffer, " VK_ERROR_FRAGMENTED_POOL\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_FRAGMENTED_POOL: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_UNKNOWN:
-	    strcat_s(msgBuffer, " VK_ERROR_UNKNOWN\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_UNKNOWN: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_OUT_OF_POOL_MEMORY:
-	    strcat_s(msgBuffer, " VK_ERROR_OUT_OF_POOL_MEMORY\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_OUT_OF_POOL_MEMORY: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_INVALID_EXTERNAL_HANDLE:
-	    strcat_s(msgBuffer, " VK_ERROR_INVALID_EXTERNAL_HANDLE\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_INVALID_EXTERNAL_HANDLE: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_FRAGMENTATION:
-	    strcat_s(msgBuffer, " VK_ERROR_FRAGMENTATION\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_FRAGMENTATION: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS:
-	    strcat_s(msgBuffer, " VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_SURFACE_LOST_KHR:
-	    strcat_s(msgBuffer, " VK_ERROR_SURFACE_LOST_KHR\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_SURFACE_LOST_KHR: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR:
-	    strcat_s(msgBuffer, " VK_ERROR_NATIVE_WINDOW_IN_USE_KHR\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_NATIVE_WINDOW_IN_USE_KHR: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_SUBOPTIMAL_KHR:
 	    break;
 	case VK_ERROR_OUT_OF_DATE_KHR:
-	    strcat_s(msgBuffer, " VK_ERROR_OUT_OF_DATE_KHR\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_OUT_OF_DATE_KHR: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_INCOMPATIBLE_DISPLAY_KHR:
-	    strcat_s(msgBuffer, " VK_ERROR_INCOMPATIBLE_DISPLAY_KHR\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_INCOMPATIBLE_DISPLAY_KHR: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_VALIDATION_FAILED_EXT:
-	    strcat_s(msgBuffer, " VK_ERROR_VALIDATION_FAILED_EXT\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_VALIDATION_FAILED_EXT: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_INVALID_SHADER_NV:
-	    strcat_s(msgBuffer, " VK_ERROR_INVALID_SHADER_NV\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_INVALID_SHADER_NV: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT:
-	    strcat_s(msgBuffer, " VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_NOT_PERMITTED_EXT:
-	    strcat_s(msgBuffer, " VK_ERROR_NOT_PERMITTED_EXT\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_NOT_PERMITTED_EXT: {0}", errorMsg);
 	    error = true;
 	    break;
 	case VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT:
-	    strcat_s(msgBuffer, " VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT\n");
+	    LOG_CORE_CRITICAL("VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT: {0}", errorMsg);
 	    error = true;
 	    break;
 	default:
 	    break;
     }
 
-    if(error)
-    {
-	LOG_ERROR("{0}", msgBuffer);
-    }
+    ASSERT(!error);
 
     return result;
 }
@@ -1142,6 +1139,23 @@ Format VulkanUtilities::Translate(VkFormat format)
     return Format();
 }
 
+VkImageType VulkanUtilities::Translate(ImageType imageType)
+{
+    switch(imageType)
+    {
+	case ImageType::_1D:
+	    return VK_IMAGE_TYPE_1D;
+	case ImageType::_2D:
+	    return VK_IMAGE_TYPE_2D;
+	case ImageType::_3D:
+	    return VK_IMAGE_TYPE_3D;
+	default:
+	    assert(false);
+	    break;
+    }
+    return VkImageType();
+}
+
 VkImageViewType VulkanUtilities::Translate(ImageViewType imageViewType)
 {
     switch(imageViewType)
@@ -1165,6 +1179,77 @@ VkImageViewType VulkanUtilities::Translate(ImageViewType imageViewType)
 	    break;
     }
     return VkImageViewType();
+}
+
+VkBufferCreateFlags VulkanUtilities::Translate(BufferCreateFlags flags)
+{
+    VkBufferCreateFlags result = 0;
+
+    return result;
+}
+
+VkBufferUsageFlags VulkanUtilities::Translate(BufferUsageFlags flags)
+{
+    VkBufferUsageFlags result = 0;
+
+    if(TestFlagBit(flags, BufferUsageFlags::TRANSFER_SRC_BIT))
+    {
+	result |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    }
+    if(TestFlagBit(flags, BufferUsageFlags::TRANSFER_DST_BIT))
+    {
+	result |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    }
+    if(TestFlagBit(flags, BufferUsageFlags::TYPED_BUFFER_BIT))
+    {
+	result |= VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
+    }
+    if(TestFlagBit(flags, BufferUsageFlags::RW_TYPED_BUFFER_BIT))
+    {
+	result |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
+    }
+    if(TestFlagBit(flags, BufferUsageFlags::CONSTANT_BUFFER_BIT))
+    {
+	result |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    }
+    if(TestFlagBit(flags, BufferUsageFlags::BYTE_BUFFER_BIT))
+    {
+	result |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    }
+    if(TestFlagBit(flags, BufferUsageFlags::RW_BYTE_BUFFER_BIT))
+    {
+	result |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    }
+    if(TestFlagBit(flags, BufferUsageFlags::STRUCTURED_BUFFER_BIT))
+    {
+	result |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    }
+    if(TestFlagBit(flags, BufferUsageFlags::RW_STRUCTURED_BUFFER_BIT))
+    {
+	result |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    }
+    if(TestFlagBit(flags, BufferUsageFlags::INDEX_BUFFER_BIT))
+    {
+	result |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    }
+    if(TestFlagBit(flags, BufferUsageFlags::VERTEX_BUFFER_BIT))
+    {
+	result |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    }
+    if(TestFlagBit(flags, BufferUsageFlags::INDIRECT_BUFFER_BIT))
+    {
+	result |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+    }
+    if(TestFlagBit(flags, BufferUsageFlags::CLEAR_BIT))
+    {
+	result |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    }
+    if(TestFlagBit(flags, BufferUsageFlags::SHADER_DEVICE_ADDRESS_BIT))
+    {
+	result |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+    }
+
+    return result;
 }
 
 VkComponentSwizzle VulkanUtilities::Translate(ComponentSwizzle swizzle)
@@ -1356,6 +1441,30 @@ VkImageCreateFlags VulkanUtilities::Translate(ImageCreateFlags flags)
     if(TestFlagBit(flags, ImageCreateFlags::_2D_ARRAY_COMPATIBLE_BIT))
     {
 	result |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
+    }
+
+    return result;
+}
+
+VkMemoryPropertyFlags VulkanUtilities::Translate(MemoryPropertyFlags flags)
+{
+    VkMemoryPropertyFlags result = 0;
+
+    if(TestFlagBit(flags, MemoryPropertyFlags::DEVICE_LOCAL_BIT))
+    {
+	result |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    }
+    if(TestFlagBit(flags, MemoryPropertyFlags::HOST_VISIBLE_BIT))
+    {
+	result |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    }
+    if(TestFlagBit(flags, MemoryPropertyFlags::HOST_COHERENT_BIT))
+    {
+	result |= VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    }
+    if(TestFlagBit(flags, MemoryPropertyFlags::HOST_CACHED_BIT))
+    {
+	result |= VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
     }
 
     return result;

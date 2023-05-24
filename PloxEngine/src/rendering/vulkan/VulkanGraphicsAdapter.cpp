@@ -6,8 +6,11 @@
 #include "core/logger.h"
 #include "eastl/string.h"
 #include "platform/window/Window.h"
+#include "rendering/types/BufferView.h"
 #include "rendering/types/ImageView.h"
+#include "rendering/types/Sampler.h"
 #include "volk.h"
+#include "VulkanBuffer.h"
 #include "VulkanCommandPool.h"
 #include "VulkanDescriptorSet.h"
 #include "VulkanDeviceInfo.h"
@@ -20,7 +23,6 @@
 
 #undef CreateSemaphore
 
-static PFN_vkSetDebugUtilsObjectNameEXT s_vkSetDebugUtilsObjectName = {};
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -44,10 +46,16 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
 }
 
 VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer)
-    : m_semaphoreMemoryPool(sizeof(VulkanSemaphore), 16, "VulkanSemaphore Pool Allocator"),
-      m_commandPoolMemoryPool(sizeof(VulkanCommandPool), 32, "VulkanCommandPool Pool Allocator"),
-      m_graphicsPipelineMemoryPool(sizeof(VulkanGraphicsPipeline), 64, "VulkanGraphicsPipeline Pool Allocator"),
+    : m_graphicsPipelineMemoryPool(sizeof(VulkanGraphicsPipeline), 64, "VulkanGraphicsPipeline Pool Allocator"),
+      //m_computePipelineMemoryPool(sizeof(VulkanComputePipeline), 64, "VulkanComputePipeline Pool Allocator"),
+      m_commandPoolMemoryPool(sizeof(VulkanCommandPool), 32, "VulkanCommandListPool Pool Allocator"),
+      m_imageMemoryPool(sizeof(VulkanImage), 1024, "VulkanImage Pool Allocator"),
+      m_bufferMemoryPool(sizeof(VulkanBuffer), 1024, "VulkanBuffer Pool Allocator"),
       m_imageViewMemoryPool(sizeof(VulkanImageView), 1024, "VulkanImageView Pool Allocator"),
+      m_bufferViewMemoryPool(sizeof(VulkanBufferView), 64, "VulkanBufferView Pool Allocator"),
+      //m_samplerMemoryPool(sizeof(VulkanSampler), 16, "VulkanSampler Pool Allocator"),
+      m_semaphoreMemoryPool(sizeof(VulkanSemaphore), 16, "VulkanSemaphore Pool Allocator"),
+      //m_queryPoolMemoryPool(sizeof(VulkanQueryPool), 16, "VulkanQueryPool Pool Allocator"),
       m_descriptorSetPoolMemoryPool(sizeof(VulkanDescriptorSetPool), 16, "VulkanDescriptorSetPool Pool Allocator"),
       m_descriptorSetLayoutMemoryPool(sizeof(VulkanDescriptorSetLayout), 16, "VulkanDescriptorSetLayout Pool Allocator")
 {
@@ -149,6 +157,8 @@ VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer
 	requiredVulkan12Features.descriptorBindingStorageBufferUpdateAfterBind	    = VK_TRUE;
 	requiredVulkan12Features.descriptorBindingUniformTexelBufferUpdateAfterBind = VK_TRUE;
 	requiredVulkan12Features.descriptorBindingUpdateUnusedWhilePending	    = VK_TRUE;
+	requiredVulkan12Features.descriptorBindingStorageImageUpdateAfterBind	    = VK_TRUE;
+	requiredVulkan12Features.descriptorBindingStorageTexelBufferUpdateAfterBind = VK_TRUE;
 	//requiredVulkan12Features.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE;
     }
 
@@ -265,21 +275,21 @@ VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer
 	// Populate Queue Info
 	{
 	    m_graphicsQueue.m_queue		 = VK_NULL_HANDLE;
-	    m_graphicsQueue.m_queueType		 = VulkanQueue::QueueType::GRAPHICS;
+	    m_graphicsQueue.m_queueType		 = QueueType::GRAPHICS;
 	    m_graphicsQueue.m_timestampValidBits = 0;
 	    m_graphicsQueue.m_timestampPeriod	 = selectedDevice.GetProperties().limits.timestampPeriod;
 	    m_graphicsQueue.m_presentable	 = true;
 	    m_graphicsQueue.m_queueFamily	 = selectedDevice.GetGraphicsQueueFamilyIndex();
 
 	    m_computeQueue.m_queue		= VK_NULL_HANDLE;
-	    m_computeQueue.m_queueType		= VulkanQueue::QueueType::COMPUTE;
+	    m_computeQueue.m_queueType		= QueueType::COMPUTE;
 	    m_computeQueue.m_timestampValidBits = 0;
 	    m_computeQueue.m_timestampPeriod	= selectedDevice.GetProperties().limits.timestampPeriod;
 	    m_computeQueue.m_presentable	= selectedDevice.IsComputeQueuePresentable();
 	    m_computeQueue.m_queueFamily	= selectedDevice.GetComputeQueueFamilyIndex();
 
 	    m_transferQueue.m_queue		 = VK_NULL_HANDLE;
-	    m_transferQueue.m_queueType		 = VulkanQueue::QueueType::TRANSFER;
+	    m_transferQueue.m_queueType		 = QueueType::TRANSFER;
 	    m_transferQueue.m_timestampValidBits = 0;
 	    m_transferQueue.m_timestampPeriod	 = selectedDevice.GetProperties().limits.timestampPeriod;
 	    m_transferQueue.m_presentable	 = false;
@@ -374,8 +384,6 @@ VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer
 
 	LOG_CORE_INFO("Logical Device Created ({0})", selectedDevice.GetProperties().deviceName);
 
-	s_vkSetDebugUtilsObjectName = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetDeviceProcAddr(m_device, "vkSetDebugUtilsObjectNameEXT"));
-
 	Vulkan::InitializePlatform(m_instance, m_device);
 
 	// Get Device Queue Info
@@ -383,10 +391,6 @@ VulkanGraphicsAdapter::VulkanGraphicsAdapter(void* windowHandle, bool debugLayer
 	    vkGetDeviceQueue(m_device, m_graphicsQueue.GetQueueFamily(), 0, m_graphicsQueue.GetQueue());
 	    vkGetDeviceQueue(m_device, m_computeQueue.GetQueueFamily(), 0, m_computeQueue.GetQueue());
 	    vkGetDeviceQueue(m_device, m_transferQueue.GetQueueFamily(), 0, m_transferQueue.GetQueue());
-
-	    Vulkan::SetResourceName(m_device, VK_OBJECT_TYPE_QUEUE, (uint64_t) *m_graphicsQueue.GetQueue(), "Graphics Queue");
-	    Vulkan::SetResourceName(m_device, VK_OBJECT_TYPE_QUEUE, (uint64_t) *m_computeQueue.GetQueue(), "Compute Queue");
-	    Vulkan::SetResourceName(m_device, VK_OBJECT_TYPE_QUEUE, (uint64_t) *m_transferQueue.GetQueue(), "Transfer Queue");
 
 	    unsigned int queueFamilyPropertyCount = 0;
 	    vkGetPhysicalDeviceQueueFamilyProperties(m_physicalDevice, &queueFamilyPropertyCount, nullptr);
@@ -446,6 +450,40 @@ void VulkanGraphicsAdapter::CreateSemaphore(uint64_t initialValue, Semaphore** s
     *semaphore = ALLOC_NEW(&m_semaphoreMemoryPool, VulkanSemaphore)(m_device, initialValue);
 }
 
+void VulkanGraphicsAdapter::CreateImage(const ImageCreateInfo& imageCreateInfo, MemoryPropertyFlags requiredMemoryPropertyFlags, MemoryPropertyFlags preferredMemoryPropertyFlags, bool dedicated, Image** image)
+{
+    VulkanAllocationCreateInfo allocInfo = {};
+    {
+	allocInfo.RequiredFlags	      = VulkanUtilities::Translate(requiredMemoryPropertyFlags);
+	allocInfo.PreferredFlags      = VulkanUtilities::Translate(preferredMemoryPropertyFlags);
+	allocInfo.DedicatedAllocation = dedicated;
+    }
+
+    VkImageCreateInfo createInfo { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+    {
+	createInfo.flags		 = VulkanUtilities::Translate(imageCreateInfo.CreateFlags);
+	createInfo.imageType		 = VulkanUtilities::Translate(imageCreateInfo.ImageType);
+	createInfo.format		 = VulkanUtilities::Translate(imageCreateInfo.Format);
+	createInfo.extent		 = { imageCreateInfo.Width, imageCreateInfo.Height, imageCreateInfo.Depth };
+	createInfo.mipLevels		 = imageCreateInfo.Levels;
+	createInfo.arrayLayers		 = imageCreateInfo.Layers;
+	createInfo.samples		 = static_cast<VkSampleCountFlagBits>(imageCreateInfo.Samples);
+	createInfo.tiling		 = VK_IMAGE_TILING_OPTIMAL;
+	createInfo.usage		 = VulkanUtilities::Translate(imageCreateInfo.UsageFlags);
+	createInfo.sharingMode		 = VK_SHARING_MODE_EXCLUSIVE;
+	createInfo.queueFamilyIndexCount = 0;
+	createInfo.pQueueFamilyIndices	 = nullptr;
+	createInfo.initialLayout	 = VK_IMAGE_LAYOUT_UNDEFINED;
+    }
+
+    VkImage nativeHandle	       = VK_NULL_HANDLE;
+    VulkanAllocationHandle allocHandle = 0;
+
+    VulkanUtilities::checkResult(m_allocator->CreateImage(allocInfo, createInfo, nativeHandle, allocHandle));
+
+    *image = ALLOC_NEW(&m_imageMemoryPool, VulkanImage)(nativeHandle, allocHandle, imageCreateInfo);
+}
+
 void VulkanGraphicsAdapter::CreateImageView(const ImageViewCreateInfo* imageViewCreateInfo, ImageView** imageView)
 {
     *imageView = ALLOC_NEW(&m_imageViewMemoryPool, VulkanImageView)(m_device, *imageViewCreateInfo);
@@ -495,6 +533,54 @@ void VulkanGraphicsAdapter::CreateImageView(Image* image, ImageView** imageView)
     }
 
     CreateImageView(&imageViewCreateInfo, imageView);
+}
+
+void VulkanGraphicsAdapter::CreateBuffer(const BufferCreateInfo& bufferCreateInfo, MemoryPropertyFlags requiredMemoryPropertyFlags, MemoryPropertyFlags preferredMemoryPropertyFlags, bool dedicated, Buffer** buffer)
+{
+    VulkanAllocationCreateInfo allocInfo;
+    allocInfo.RequiredFlags	  = VulkanUtilities::Translate(requiredMemoryPropertyFlags);
+    allocInfo.PreferredFlags	  = VulkanUtilities::Translate(preferredMemoryPropertyFlags);
+    allocInfo.DedicatedAllocation = dedicated;
+
+    uint32_t queueFamilyIndices[] = {
+	m_graphicsQueue.m_queueFamily,
+	m_computeQueue.m_queueFamily,
+	m_transferQueue.m_queueFamily
+    };
+
+    uint32_t queueFamilyIndexCount = 0;
+    uint32_t uniqueQueueFamilyIndices[3];
+
+    uniqueQueueFamilyIndices[queueFamilyIndexCount++] = queueFamilyIndices[0];
+
+    if(queueFamilyIndices[1] != queueFamilyIndices[0])
+    {
+	uniqueQueueFamilyIndices[queueFamilyIndexCount++] = queueFamilyIndices[1];
+    }
+    if(queueFamilyIndices[2] != queueFamilyIndices[1] && queueFamilyIndices[2] != queueFamilyIndices[0])
+    {
+	uniqueQueueFamilyIndices[queueFamilyIndexCount++] = queueFamilyIndices[2];
+    }
+
+    VkBufferCreateInfo createInfo { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    createInfo.flags		     = VulkanUtilities::Translate(bufferCreateInfo.CreateFlags);
+    createInfo.size		     = bufferCreateInfo.Size;
+    createInfo.usage		     = VulkanUtilities::Translate(bufferCreateInfo.UsageFlags);
+    createInfo.sharingMode	     = VK_SHARING_MODE_CONCURRENT;
+    createInfo.queueFamilyIndexCount = queueFamilyIndexCount;
+    createInfo.pQueueFamilyIndices   = uniqueQueueFamilyIndices;
+
+    VkBuffer nativeHandle	       = VK_NULL_HANDLE;
+    VulkanAllocationHandle allocHandle = 0;
+
+    VulkanUtilities::checkResult(m_allocator->CreateBuffer(allocInfo, createInfo, nativeHandle, allocHandle), "Failed to create Buffer!");
+
+    *buffer = ALLOC_NEW(&m_bufferMemoryPool, VulkanBuffer)(nativeHandle, allocHandle, bufferCreateInfo, m_allocator, this);
+}
+
+void VulkanGraphicsAdapter::CreateBufferView(const BufferViewCreateInfo* bufferViewCreateInfo, BufferView** bufferView)
+{
+    *bufferView = ALLOC_NEW(&m_bufferViewMemoryPool, VulkanBufferView)(m_device, *bufferViewCreateInfo);
 }
 
 void VulkanGraphicsAdapter::CreateDescriptorSetPool(uint32_t maxSets, const DescriptorSetLayout* descriptorSetLayout, DescriptorSetPool** descriptorSetPool)
@@ -555,6 +641,82 @@ void VulkanGraphicsAdapter::CreateDescriptorSetLayout(uint32_t bindingCount, con
     *descriptorSetLayout = ALLOC_NEW(&m_descriptorSetLayoutMemoryPool, VulkanDescriptorSetLayout)(m_device, bindingCount, bindingsVk, bindingFlagsVk);
 }
 
+void VulkanGraphicsAdapter::DestroyCommandPool(CommandPool* commandPool)
+{
+    if(commandPool)
+    {
+	auto* pool = dynamic_cast<VulkanCommandPool*>(commandPool);
+	ASSERT(pool);
+
+	ALLOC_DELETE(&m_commandPoolMemoryPool, pool);
+    }
+}
+
+void VulkanGraphicsAdapter::DestroyImage(Image* image)
+{
+    if(image)
+    {
+	auto* imageVk = dynamic_cast<VulkanImage*>(image);
+	assert(imageVk);
+	m_allocator->DestroyImage((VkImage) imageVk->GetNativeHandle(), reinterpret_cast<VulkanAllocationHandle>(imageVk->GetAllocationHandle()));
+
+	ALLOC_DELETE(&m_imageMemoryPool, imageVk);
+    }
+}
+void VulkanGraphicsAdapter::DestroyImageView(ImageView* imageView)
+{
+    if(imageView)
+    {
+	auto* viewVk = dynamic_cast<VulkanImageView*>(imageView);
+	assert(viewVk);
+
+	ALLOC_DELETE(&m_imageViewMemoryPool, viewVk);
+    }
+}
+void VulkanGraphicsAdapter::DestroyBuffer(Buffer* buffer)
+{
+    if(buffer)
+    {
+	auto* bufferVk = dynamic_cast<VulkanBuffer*>(buffer);
+	assert(bufferVk);
+	m_allocator->DestroyBuffer((VkBuffer) bufferVk->GetNativeHandle(), reinterpret_cast<VulkanAllocationHandle>(bufferVk->GetAllocationHandle()));
+
+	ALLOC_DELETE(&m_bufferMemoryPool, bufferVk);
+    }
+}
+void VulkanGraphicsAdapter::DestroyBufferView(BufferView* bufferView)
+{
+    if(bufferView)
+    {
+	auto* viewVk = dynamic_cast<VulkanBufferView*>(bufferView);
+	assert(viewVk);
+
+	ALLOC_DELETE(&m_bufferViewMemoryPool, viewVk);
+    }
+}
+
+void VulkanGraphicsAdapter::DestroyDescriptorSetPool(DescriptorSetPool* descriptorSetPool)
+{
+    if(descriptorSetPool)
+    {
+	auto* pool = dynamic_cast<VulkanDescriptorSetPool*>(descriptorSetPool);
+	ASSERT(pool);
+
+	ALLOC_DELETE(&m_descriptorSetPoolMemoryPool, pool);
+    }
+}
+
+void VulkanGraphicsAdapter::DestroyDescriptorSetLayout(DescriptorSetLayout* descriptorSetLayout)
+{
+    if(descriptorSetLayout)
+    {
+	auto* layout = dynamic_cast<VulkanDescriptorSetLayout*>(descriptorSetLayout);
+	assert(layout);
+
+	ALLOC_DELETE(&m_descriptorSetLayoutMemoryPool, layout);
+    }
+}
+
 bool VulkanGraphicsAdapter::ActivateFullscreen(Window* window)
 {
     if(m_swapchain == nullptr || !m_fullscreenExclusiveSupported)
@@ -606,20 +768,82 @@ bool VulkanGraphicsAdapter::IsDynamicRenderingExtensionSupported()
     return m_dynamicRenderingExtensionSupport;
 }
 
-void Vulkan::SetResourceName(VkDevice device, VkObjectType type, uint64_t handle, const char* name)
+void VulkanGraphicsAdapter::SetDebugObjectName(ObjectType type, void* object, const char* name)
 {
-    if(handle == 0 || name == nullptr)
     {
-	return;
+	VkDebugUtilsObjectNameInfoEXT info { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+	info.pObjectName = name;
+
+	switch(type)
+	{
+	    case ObjectType::QUEUE:
+		info.objectType	  = VK_OBJECT_TYPE_QUEUE;
+		info.objectHandle = (uint64_t) reinterpret_cast<Queue*>(object)->GetNativeHandle();
+		break;
+	    case ObjectType::SEMAPHORE:
+		info.objectType	  = VK_OBJECT_TYPE_SEMAPHORE;
+		info.objectHandle = (uint64_t) reinterpret_cast<Semaphore*>(object)->GetNativeHandle();
+		break;
+	    case ObjectType::COMMAND_LIST:
+		info.objectType	  = VK_OBJECT_TYPE_COMMAND_BUFFER;
+		info.objectHandle = (uint64_t) reinterpret_cast<Command*>(object)->GetNativeHandle();
+		break;
+	    case ObjectType::BUFFER:
+		info.objectType	  = VK_OBJECT_TYPE_BUFFER;
+		info.objectHandle = (uint64_t) reinterpret_cast<Buffer*>(object)->GetNativeHandle();
+		break;
+	    case ObjectType::IMAGE:
+		info.objectType	  = VK_OBJECT_TYPE_IMAGE;
+		info.objectHandle = (uint64_t) reinterpret_cast<Image*>(object)->GetNativeHandle();
+		break;
+	    case ObjectType::QUERY_POOL:
+		info.objectType = VK_OBJECT_TYPE_QUERY_POOL;
+		//info.objectHandle = (uint64_t) reinterpret_cast<QueryPool*>(object)->GetNativeHandle();
+		break;
+	    case ObjectType::BUFFER_VIEW:
+		info.objectType	  = VK_OBJECT_TYPE_BUFFER_VIEW;
+		info.objectHandle = (uint64_t) reinterpret_cast<BufferView*>(object)->GetNativeHandle();
+		break;
+	    case ObjectType::IMAGE_VIEW:
+		info.objectType	  = VK_OBJECT_TYPE_IMAGE_VIEW;
+		info.objectHandle = (uint64_t) reinterpret_cast<ImageView*>(object)->GetNativeHandle();
+		break;
+	    case ObjectType::GRAPHICS_PIPELINE:
+		info.objectType	  = VK_OBJECT_TYPE_PIPELINE;
+		info.objectHandle = (uint64_t) reinterpret_cast<GraphicsPipeline*>(object)->GetNativeHandle();
+		break;
+	    case ObjectType::COMPUTE_PIPELINE:
+		info.objectType = VK_OBJECT_TYPE_PIPELINE;
+		//info.objectHandle = (uint64_t) reinterpret_cast<ComputePipeline*>(object)->GetNativeHandle();
+		break;
+	    case ObjectType::DESCRIPTOR_SET_LAYOUT:
+		info.objectType	  = VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT;
+		info.objectHandle = (uint64_t) reinterpret_cast<DescriptorSetLayout*>(object)->GetNativeHandle();
+		break;
+	    case ObjectType::SAMPLER:
+		info.objectType	  = VK_OBJECT_TYPE_SAMPLER;
+		info.objectHandle = (uint64_t) reinterpret_cast<Sampler*>(object)->GetNativeHandle();
+		break;
+	    case ObjectType::DESCRIPTOR_SET_POOL:
+		info.objectType	  = VK_OBJECT_TYPE_DESCRIPTOR_POOL;
+		info.objectHandle = (uint64_t) reinterpret_cast<DescriptorSetPool*>(object)->GetNativeHandle();
+		break;
+	    case ObjectType::DESCRIPTOR_SET:
+		info.objectType	  = VK_OBJECT_TYPE_DESCRIPTOR_SET;
+		info.objectHandle = (uint64_t) reinterpret_cast<DescriptorSet*>(object)->GetNativeHandle();
+		break;
+	    case ObjectType::COMMAND_LIST_POOL:
+		info.objectType	  = VK_OBJECT_TYPE_COMMAND_POOL;
+		info.objectHandle = (uint64_t) reinterpret_cast<CommandPool*>(object)->GetNativeHandle();
+		break;
+	    case ObjectType::SWAPCHAIN:
+		info.objectType	  = VK_OBJECT_TYPE_SWAPCHAIN_KHR;
+		info.objectHandle = (uint64_t) reinterpret_cast<Swapchain*>(object)->GetNativeHandle();
+		break;
+	    default:
+		break;
+	}
+
+	VulkanUtilities::checkResult(vkSetDebugUtilsObjectNameEXT(m_device, &info));
     }
-
-    static std::mutex mutex;
-    std::unique_lock<std::mutex> lock(mutex);
-
-    VkDebugUtilsObjectNameInfoEXT nameInfo = {};
-    nameInfo.sType			   = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
-    nameInfo.objectType			   = type;
-    nameInfo.objectHandle		   = handle;
-    nameInfo.pObjectName		   = name;
-    s_vkSetDebugUtilsObjectName(device, &nameInfo);
 }

@@ -6,6 +6,16 @@
 #include "utility/Enum.h"
 #include <cstdint>
 
+// Possibly move
+enum class MemoryPropertyFlags
+{
+    DEVICE_LOCAL_BIT  = 0x00000001,
+    HOST_VISIBLE_BIT  = 0x00000002,
+    HOST_COHERENT_BIT = 0x00000004,
+    HOST_CACHED_BIT   = 0x00000008,
+};
+DEF_ENUM_FLAG_OPERATORS(MemoryPropertyFlags);
+
 enum class BufferUsageFlags
 {
     TRANSFER_SRC_BIT	      = 1u << 0u,

@@ -27,7 +27,6 @@ namespace Vulkan
     void InitializePlatform(VkInstance instance, VkDevice device);
     void AddFullscreenExclusiveInfo(const void* pNext, Window* window);
     bool ActivateFullscreen(Window* window, VulkanSwapchain* swapchain);
-    void SetResourceName(VkDevice device, VkObjectType type, uint64_t handle, const char* name);
 }; // namespace Vulkan
 
 class VulkanGraphicsAdapter : public GraphicsAdapter
@@ -40,10 +39,21 @@ public:
     void CreateCommandPool(const Queue* queue, CommandPool** commandPool) override;
     void CreateSwapchain(const Queue* presentQueue, unsigned int width, unsigned int height, Window* window, PresentMode presentMode, Swapchain** swapchain) override;
     void CreateSemaphore(uint64_t initialValue, Semaphore** semaphore) override;
+    void CreateImage(const ImageCreateInfo& imageCreateInfo, MemoryPropertyFlags requiredMemoryPropertyFlags, MemoryPropertyFlags preferredMemoryPropertyFlags, bool dedicated, Image** image) override;
     void CreateImageView(const ImageViewCreateInfo* imageViewCreateInfo, ImageView** imageView) override;
     void CreateImageView(Image* image, ImageView** imageView) override;
+    void CreateBuffer(const BufferCreateInfo& bufferCreateInfo, MemoryPropertyFlags requiredMemoryPropertyFlags, MemoryPropertyFlags preferredMemoryPropertyFlags, bool dedicated, Buffer** buffer) override;
+    void CreateBufferView(const BufferViewCreateInfo* bufferViewCreateInfo, BufferView** bufferView) override;
     void CreateDescriptorSetPool(uint32_t maxSets, const DescriptorSetLayout* descriptorSetLayout, DescriptorSetPool** descriptorSetPool) override;
     void CreateDescriptorSetLayout(uint32_t bindingCount, const DescriptorSetLayoutBinding* bindings, DescriptorSetLayout** descriptorSetLayout) override;
+
+    void DestroyCommandPool(CommandPool* commandPool) override;
+    void DestroyImage(Image* image) override;
+    void DestroyImageView(ImageView* imageView) override;
+    void DestroyBuffer(Buffer* buffer) override;
+    void DestroyBufferView(BufferView* bufferView) override;
+    void DestroyDescriptorSetPool(DescriptorSetPool* descriptorSetPool) override;
+    void DestroyDescriptorSetLayout(DescriptorSetLayout* descriptorSetLayout) override;
 
     bool ActivateFullscreen(Window* window) override;
 
@@ -52,6 +62,8 @@ public:
     Queue* GetGraphicsQueue() override;
     Queue* GetComputeQueue() override;
     Queue* GetTransferQueue() override;
+
+    void SetDebugObjectName(ObjectType type, void* object, const char* name) override;
 
     VkRenderPass GetRenderPass(const VulkanRenderPassDescription& renderPassDescription);
     VkFramebuffer GetFrameBuffer(const VulkanFrameBufferDescription& frameBufferDescription);
@@ -72,12 +84,18 @@ private:
     VulkanFrameBufferCache* m_frameBufferCache	   = nullptr;
     VulkanSwapchain* m_swapchain		   = nullptr;
     VulkanMemoryAllocator* m_allocator		   = nullptr;
-    DynamicPoolAllocator m_commandPoolMemoryPool;
-    DynamicPoolAllocator m_semaphoreMemoryPool;
     DynamicPoolAllocator m_graphicsPipelineMemoryPool;
+    //DynamicPoolAllocator m_computePipelineMemoryPool;
+    DynamicPoolAllocator m_commandPoolMemoryPool;
+    DynamicPoolAllocator m_imageMemoryPool;
+    DynamicPoolAllocator m_bufferMemoryPool;
+    DynamicPoolAllocator m_imageViewMemoryPool;
+    DynamicPoolAllocator m_bufferViewMemoryPool;
+    //DynamicPoolAllocator m_samplerMemoryPool;
+    DynamicPoolAllocator m_semaphoreMemoryPool;
+    //DynamicPoolAllocator m_queryPoolMemoryPool;
     DynamicPoolAllocator m_descriptorSetPoolMemoryPool;
     DynamicPoolAllocator m_descriptorSetLayoutMemoryPool;
-    DynamicPoolAllocator m_imageViewMemoryPool;
     bool m_dynamicRenderingExtensionSupport = false;
     bool m_supportsMemoryBudgetExtension    = false;
     bool m_fullscreenExclusiveSupported	    = false;

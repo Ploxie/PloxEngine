@@ -97,3 +97,40 @@ VkDeviceSize VulkanBuffer::GetOffset() const
 {
     return m_allocator->GetAllocationInfo(static_cast<VulkanAllocationHandle>(m_allocHandle)).Offset;
 }
+
+VulkanBufferView::VulkanBufferView(VkDevice device, const BufferViewCreateInfo& createInfo)
+    : m_device(device), m_bufferView(VK_NULL_HANDLE), m_description(createInfo)
+{
+    const auto* buffer = dynamic_cast<const VulkanBuffer*>(createInfo.Buffer);
+    ASSERT(buffer);
+
+    VkBufferViewCreateInfo bufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO };
+    {
+	bufferCreateInfo.buffer = (VkBuffer) buffer->GetNativeHandle();
+	bufferCreateInfo.format = VulkanUtilities::Translate(createInfo.Format);
+	bufferCreateInfo.offset = createInfo.Offset;
+	bufferCreateInfo.range	= createInfo.Range;
+    }
+
+    VulkanUtilities::checkResult(vkCreateBufferView(m_device, &bufferCreateInfo, nullptr, &m_bufferView));
+}
+
+VulkanBufferView::~VulkanBufferView()
+{
+    vkDestroyBufferView(m_device, m_bufferView, nullptr);
+}
+
+void* VulkanBufferView::GetNativeHandle() const
+{
+    return m_bufferView;
+}
+
+const Buffer* VulkanBufferView::GetBuffer() const
+{
+    return m_description.Buffer;
+}
+
+const BufferViewCreateInfo& VulkanBufferView::GetDescription() const
+{
+    return m_description;
+}

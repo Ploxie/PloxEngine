@@ -2,6 +2,7 @@
 // Created by Ploxie on 2023-05-17.
 //
 #include "RenderUtilities.h"
+#include "rendering/types/Buffer.h"
 
 bool RenderUtilities::IsDepthFormat(Format format)
 {
@@ -33,12 +34,102 @@ bool RenderUtilities::IsStencilFormat(Format format)
     }
 }
 
-Barrier RenderUtilities::ImageBarrier(const Image *image, PipelineStageFlags stagesBefore, PipelineStageFlags stagesAfter, ResourceState stateBefore, ResourceState stateAfter, const ImageSubresourceRange &subresourceRange)
+uint32_t RenderUtilities::GetUsageFlags(ResourceState state, bool isImage)
+{
+    uint32_t flags = 0;
+
+    if((state & ResourceState::READ_RESOURCE) != 0)
+    {
+	flags |= isImage ? (uint32_t) ImageUsageFlags::TEXTURE_BIT : (uint32_t) (BufferUsageFlags::TYPED_BUFFER_BIT | BufferUsageFlags::BYTE_BUFFER_BIT | BufferUsageFlags::STRUCTURED_BUFFER_BIT);
+    }
+
+    if((state & ResourceState::READ_DEPTH_STENCIL) != 0)
+    {
+	ASSERT(isImage);
+	flags |= (uint32_t) ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT_BIT;
+    }
+
+    if((state & ResourceState::READ_CONSTANT_BUFFER) != 0)
+    {
+	ASSERT(!isImage);
+	flags |= (uint32_t) BufferUsageFlags::CONSTANT_BUFFER_BIT;
+    }
+
+    if((state & ResourceState::READ_VERTEX_BUFFER) != 0)
+    {
+	ASSERT(!isImage);
+	flags |= (uint32_t) BufferUsageFlags::VERTEX_BUFFER_BIT;
+    }
+
+    if((state & ResourceState::READ_INDEX_BUFFER) != 0)
+    {
+	ASSERT(!isImage);
+	flags |= (uint32_t) BufferUsageFlags::INDEX_BUFFER_BIT;
+    }
+
+    if((state & ResourceState::READ_INDIRECT_BUFFER) != 0)
+    {
+	ASSERT(!isImage);
+	flags |= (uint32_t) BufferUsageFlags::INDIRECT_BUFFER_BIT;
+    }
+
+    if((state & ResourceState::READ_TRANSFER) != 0)
+    {
+	flags |= isImage ? (uint32_t) ImageUsageFlags::TRANSFER_SRC_BIT : (uint32_t) BufferUsageFlags::TRANSFER_SRC_BIT;
+    }
+
+    if((state & ResourceState::WRITE_DEPTH_STENCIL) != 0)
+    {
+	ASSERT(isImage);
+	flags |= (uint32_t) ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT_BIT;
+    }
+
+    if((state & ResourceState::WRITE_COLOR_ATTACHMENT) != 0)
+    {
+	ASSERT(isImage);
+	flags |= (uint32_t) ImageUsageFlags::COLOR_ATTACHMENT_BIT;
+    }
+
+    if((state & ResourceState::WRITE_TRANSFER) != 0)
+    {
+	flags |= isImage ? (uint32_t) ImageUsageFlags::TRANSFER_DST_BIT : (uint32_t) BufferUsageFlags::TRANSFER_DST_BIT;
+    }
+
+    if((state & ResourceState::CLEAR_RESOURCE) != 0)
+    {
+	flags |= isImage ? (uint32_t) ImageUsageFlags::CLEAR_BIT : (uint32_t) BufferUsageFlags::CLEAR_BIT;
+    }
+
+    if((state & ResourceState::RW_RESOURCE) != 0)
+    {
+	flags |= isImage ? (uint32_t) ImageUsageFlags::RW_TEXTURE_BIT : (uint32_t) (BufferUsageFlags::RW_TYPED_BUFFER_BIT | BufferUsageFlags::RW_BYTE_BUFFER_BIT | BufferUsageFlags::RW_STRUCTURED_BUFFER_BIT);
+    }
+
+    if((state & ResourceState::RW_RESOURCE_READ_ONLY) != 0)
+    {
+	flags |= isImage ? (uint32_t) ImageUsageFlags::RW_TEXTURE_BIT : (uint32_t) (BufferUsageFlags::RW_TYPED_BUFFER_BIT | BufferUsageFlags::RW_BYTE_BUFFER_BIT | BufferUsageFlags::RW_STRUCTURED_BUFFER_BIT);
+    }
+
+    if((state & ResourceState::RW_RESOURCE_WRITE_ONLY) != 0)
+    {
+	flags |= isImage ? (uint32_t) ImageUsageFlags::RW_TEXTURE_BIT : (uint32_t) (BufferUsageFlags::RW_TYPED_BUFFER_BIT | BufferUsageFlags::RW_BYTE_BUFFER_BIT | BufferUsageFlags::RW_STRUCTURED_BUFFER_BIT);
+    }
+
+    if((state & ResourceState::PRESENT) != 0)
+    {
+	ASSERT(isImage);
+	flags |= 0;
+    }
+
+    return flags;
+}
+
+Barrier RenderUtilities::ImageBarrier(const Image* image, PipelineStageFlags stagesBefore, PipelineStageFlags stagesAfter, ResourceState stateBefore, ResourceState stateAfter, const ImageSubresourceRange& subresourceRange)
 {
     return { image, nullptr, stagesBefore, stagesAfter, stateBefore, stateAfter, nullptr, nullptr, subresourceRange, {} };
 }
 
-GraphicsPipelineBuilder::GraphicsPipelineBuilder(GraphicsPipelineCreateInfo &createInfo)
+GraphicsPipelineBuilder::GraphicsPipelineBuilder(GraphicsPipelineCreateInfo& createInfo)
     : m_createInfo(createInfo)
 {
     memset(&m_createInfo, 0, sizeof(m_createInfo));

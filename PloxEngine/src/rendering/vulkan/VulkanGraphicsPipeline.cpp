@@ -370,69 +370,79 @@ static void CreatePipelineLayout(
 	{
 	    const auto& staticSamplerDesc = layoutCreateInfo.StaticSamplerDescriptions[i];
 
-	    VkSamplerCreateInfo samplerCreateInfoVk { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-	    samplerCreateInfoVk.magFilter		= VulkanUtilities::Translate(staticSamplerDesc.MagFilter);
-	    samplerCreateInfoVk.minFilter		= VulkanUtilities::Translate(staticSamplerDesc.MinFilter);
-	    samplerCreateInfoVk.mipmapMode		= VulkanUtilities::Translate(staticSamplerDesc.MipmapMode);
-	    samplerCreateInfoVk.addressModeU		= VulkanUtilities::Translate(staticSamplerDesc.AddressModeU);
-	    samplerCreateInfoVk.addressModeV		= VulkanUtilities::Translate(staticSamplerDesc.AddressModeV);
-	    samplerCreateInfoVk.addressModeW		= VulkanUtilities::Translate(staticSamplerDesc.AddressModeW);
-	    samplerCreateInfoVk.mipLodBias		= staticSamplerDesc.MipLodBias;
-	    samplerCreateInfoVk.anisotropyEnable	= staticSamplerDesc.AnisotropyEnable;
-	    samplerCreateInfoVk.maxAnisotropy		= staticSamplerDesc.MaxAnisotropy;
-	    samplerCreateInfoVk.compareEnable		= staticSamplerDesc.CompareEnable;
-	    samplerCreateInfoVk.compareOp		= VulkanUtilities::Translate(staticSamplerDesc.CompareOp);
-	    samplerCreateInfoVk.minLod			= staticSamplerDesc.MinLod;
-	    samplerCreateInfoVk.maxLod			= staticSamplerDesc.MaxLod;
-	    samplerCreateInfoVk.borderColor		= VulkanUtilities::Translate(staticSamplerDesc.BorderColor);
-	    samplerCreateInfoVk.unnormalizedCoordinates = staticSamplerDesc.UnnormalizedCoordinates;
+	    VkSamplerCreateInfo samplerCreateInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+	    {
+		samplerCreateInfo.magFilter		  = VulkanUtilities::Translate(staticSamplerDesc.MagFilter);
+		samplerCreateInfo.minFilter		  = VulkanUtilities::Translate(staticSamplerDesc.MinFilter);
+		samplerCreateInfo.mipmapMode		  = VulkanUtilities::Translate(staticSamplerDesc.MipmapMode);
+		samplerCreateInfo.addressModeU		  = VulkanUtilities::Translate(staticSamplerDesc.AddressModeU);
+		samplerCreateInfo.addressModeV		  = VulkanUtilities::Translate(staticSamplerDesc.AddressModeV);
+		samplerCreateInfo.addressModeW		  = VulkanUtilities::Translate(staticSamplerDesc.AddressModeW);
+		samplerCreateInfo.mipLodBias		  = staticSamplerDesc.MipLodBias;
+		samplerCreateInfo.anisotropyEnable	  = staticSamplerDesc.AnisotropyEnable;
+		samplerCreateInfo.maxAnisotropy		  = staticSamplerDesc.MaxAnisotropy;
+		samplerCreateInfo.compareEnable		  = staticSamplerDesc.CompareEnable;
+		samplerCreateInfo.compareOp		  = VulkanUtilities::Translate(staticSamplerDesc.CompareOp);
+		samplerCreateInfo.minLod		  = staticSamplerDesc.MinLod;
+		samplerCreateInfo.maxLod		  = staticSamplerDesc.MaxLod;
+		samplerCreateInfo.borderColor		  = VulkanUtilities::Translate(staticSamplerDesc.BorderColor);
+		samplerCreateInfo.unnormalizedCoordinates = staticSamplerDesc.UnnormalizedCoordinates;
+	    }
 
 	    VkSampler sampler = {};
-	    VulkanUtilities::checkResult(vkCreateSampler(device, &samplerCreateInfoVk, nullptr, &sampler), "Failed to create Sampler!");
+	    VulkanUtilities::checkResult(vkCreateSampler(device, &samplerCreateInfo, nullptr, &sampler), "Failed to create Sampler!");
 	    staticSamplers.push_back(sampler);
 
-	    VkDescriptorSetLayoutBinding bindingVk {};
-	    bindingVk.binding		 = staticSamplerDesc.Binding;
-	    bindingVk.descriptorType	 = VK_DESCRIPTOR_TYPE_SAMPLER;
-	    bindingVk.descriptorCount	 = 1;
-	    bindingVk.stageFlags	 = VulkanUtilities::Translate(staticSamplerDesc.StageFlags);
-	    bindingVk.pImmutableSamplers = &staticSamplers.back();
+	    VkDescriptorSetLayoutBinding binding = {};
+	    {
+		binding.binding		   = staticSamplerDesc.Binding;
+		binding.descriptorType	   = VK_DESCRIPTOR_TYPE_SAMPLER;
+		binding.descriptorCount	   = 1;
+		binding.stageFlags	   = VulkanUtilities::Translate(staticSamplerDesc.StageFlags);
+		binding.pImmutableSamplers = &staticSamplers.back();
+	    }
 
-	    staticSamplerBindings.push_back(bindingVk);
+	    staticSamplerBindings.push_back(binding);
 	}
 
 	VkDescriptorSetLayoutCreateInfo samplerSetLayoutCreateInfo { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-	samplerSetLayoutCreateInfo.bindingCount = layoutCreateInfo.StaticSamplerCount;
-	samplerSetLayoutCreateInfo.pBindings	= staticSamplerBindings.data();
+	{
+	    samplerSetLayoutCreateInfo.bindingCount = layoutCreateInfo.StaticSamplerCount;
+	    samplerSetLayoutCreateInfo.pBindings    = staticSamplerBindings.data();
+	}
 
 	VulkanUtilities::checkResult(vkCreateDescriptorSetLayout(device, &samplerSetLayoutCreateInfo, nullptr, &staticSamplerDescriptorSetLayout), "Failed to create static sampler descriptor set layout!");
 
 	VkDescriptorPoolSize descriptorPoolSize { VK_DESCRIPTOR_TYPE_SAMPLER, layoutCreateInfo.StaticSamplerCount };
 	VkDescriptorPoolCreateInfo staticSamplerDescriptorPoolCreateInfo { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-	staticSamplerDescriptorPoolCreateInfo.maxSets	    = 1;
-	staticSamplerDescriptorPoolCreateInfo.poolSizeCount = 1;
-	staticSamplerDescriptorPoolCreateInfo.pPoolSizes    = &descriptorPoolSize;
+	{
+	    staticSamplerDescriptorPoolCreateInfo.maxSets	= 1;
+	    staticSamplerDescriptorPoolCreateInfo.poolSizeCount = 1;
+	    staticSamplerDescriptorPoolCreateInfo.pPoolSizes	= &descriptorPoolSize;
+	}
 
 	VulkanUtilities::checkResult(vkCreateDescriptorPool(device, &staticSamplerDescriptorPoolCreateInfo, nullptr, &staticSamplerDescriptorPool), "Failed to create static sampler descriptor pool!");
 
 	VkDescriptorSetAllocateInfo staticSamplerDescriptorSetAllocateInfo { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-	staticSamplerDescriptorSetAllocateInfo.descriptorPool	  = staticSamplerDescriptorPool;
-	staticSamplerDescriptorSetAllocateInfo.descriptorSetCount = 1;
-	staticSamplerDescriptorSetAllocateInfo.pSetLayouts	  = &staticSamplerDescriptorSetLayout;
+	{
+	    staticSamplerDescriptorSetAllocateInfo.descriptorPool     = staticSamplerDescriptorPool;
+	    staticSamplerDescriptorSetAllocateInfo.descriptorSetCount = 1;
+	    staticSamplerDescriptorSetAllocateInfo.pSetLayouts	      = &staticSamplerDescriptorSetLayout;
+	}
 
 	VulkanUtilities::checkResult(vkAllocateDescriptorSets(device, &staticSamplerDescriptorSetAllocateInfo, &staticSamplerDescriptorSet), "Failed to allocate static sampler descriptor set!");
     }
 
-    VkDescriptorSetLayout layoutsVk[5];
+    VkDescriptorSetLayout layouts[5];
     for(size_t i = 0; i < layoutCreateInfo.DescriptorSetLayoutCount; ++i)
     {
-	auto* layoutVk = dynamic_cast<VulkanDescriptorSetLayout*>(layoutCreateInfo.DescriptorSetLayoutDeclarations[i].Layout);
-	assert(layoutVk);
-	layoutsVk[i] = static_cast<VkDescriptorSetLayout>(layoutVk->GetNativeHandle());
+	auto* layout = dynamic_cast<VulkanDescriptorSetLayout*>(layoutCreateInfo.DescriptorSetLayoutDeclarations[i].Layout);
+	assert(layout);
+	layouts[i] = static_cast<VkDescriptorSetLayout>(layout->GetNativeHandle());
     }
     if(staticSamplerDescriptorSetLayout != VK_NULL_HANDLE)
     {
-	layoutsVk[layoutCreateInfo.StaticSamplerSet] = staticSamplerDescriptorSetLayout;
+	layouts[layoutCreateInfo.StaticSamplerSet] = staticSamplerDescriptorSetLayout;
     }
 
     VkPushConstantRange pushConstantRange;
@@ -442,7 +452,7 @@ static void CreatePipelineLayout(
 
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
     pipelineLayoutCreateInfo.setLayoutCount	    = (staticSamplerDescriptorSetLayout != VK_NULL_HANDLE) ? (layoutCreateInfo.DescriptorSetLayoutCount + 1) : layoutCreateInfo.DescriptorSetLayoutCount;
-    pipelineLayoutCreateInfo.pSetLayouts	    = layoutsVk;
+    pipelineLayoutCreateInfo.pSetLayouts	    = layouts;
     pipelineLayoutCreateInfo.pushConstantRangeCount = layoutCreateInfo.PushConstRange > 0 ? 1 : 0;
     pipelineLayoutCreateInfo.pPushConstantRanges    = layoutCreateInfo.PushConstRange > 0 ? &pushConstantRange : nullptr;
 

@@ -16,7 +16,7 @@ VkQueue *VulkanQueue::GetQueue()
     return &m_queue;
 }
 
-VulkanQueue::QueueType VulkanQueue::GetQueueType() const
+QueueType VulkanQueue::GetQueueType() const
 {
     return m_queueType;
 }
@@ -90,23 +90,27 @@ void VulkanQueue::Submit(uint32_t count, const SubmitInfo *submitInfo)
 	    semaphoresVk[semaphoreCurOffset++] = (VkSemaphore) submitInfo[i].SignalSemaphores[j]->GetNativeHandle();
 	}
 
-	auto &timelineSubInfo			  = timelineSemaphoreInfoVk[i];
-	timelineSubInfo				  = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
-	timelineSubInfo.waitSemaphoreValueCount	  = submitInfo[i].WaitSemaphoreCount;
-	timelineSubInfo.pWaitSemaphoreValues	  = submitInfo[i].WaitValues;
-	timelineSubInfo.signalSemaphoreValueCount = submitInfo[i].SignalSemaphoreCount;
-	timelineSubInfo.pSignalSemaphoreValues	  = submitInfo[i].SignalValues;
+	auto& timelineSubInfo = timelineSemaphoreInfoVk[i];
+	timelineSubInfo	      = { VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
+	{
+	    timelineSubInfo.waitSemaphoreValueCount   = submitInfo[i].WaitSemaphoreCount;
+	    timelineSubInfo.pWaitSemaphoreValues      = submitInfo[i].WaitValues;
+	    timelineSubInfo.signalSemaphoreValueCount = submitInfo[i].SignalSemaphoreCount;
+	    timelineSubInfo.pSignalSemaphoreValues    = submitInfo[i].SignalValues;
+	}
 
-	auto &subInfo		     = submitInfoVk[i];
-	subInfo			     = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-	subInfo.pNext		     = &timelineSubInfo;
-	subInfo.waitSemaphoreCount   = submitInfo[i].WaitSemaphoreCount;
-	subInfo.pWaitSemaphores	     = semaphoresVk + waitSemaphoreSubmitInfoOffset;
-	subInfo.pWaitDstStageMask    = waitDstStageMasksVk + waitMaskSubmitInfoOffset;
-	subInfo.commandBufferCount   = submitInfo[i].CommandCount;
-	subInfo.pCommandBuffers	     = commandBuffersVk + commandBuffersSubmitInfoOffset;
-	subInfo.signalSemaphoreCount = submitInfo[i].SignalSemaphoreCount;
-	subInfo.pSignalSemaphores    = semaphoresVk + signalSemaphoreSubmitInfoOffset;
+	auto& subInfo = submitInfoVk[i];
+	subInfo	      = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+	{
+	    subInfo.pNext		 = &timelineSubInfo;
+	    subInfo.waitSemaphoreCount	 = submitInfo[i].WaitSemaphoreCount;
+	    subInfo.pWaitSemaphores	 = submitInfo[i].WaitSemaphoreCount > 0 ? semaphoresVk + waitSemaphoreSubmitInfoOffset : nullptr;
+	    subInfo.pWaitDstStageMask	 = submitInfo[i].WaitSemaphoreCount > 0 ? waitDstStageMasksVk + waitMaskSubmitInfoOffset : nullptr;
+	    subInfo.commandBufferCount	 = submitInfo[i].CommandCount;
+	    subInfo.pCommandBuffers	 = commandBuffersVk + commandBuffersSubmitInfoOffset;
+	    subInfo.signalSemaphoreCount = submitInfo[i].SignalSemaphoreCount;
+	    subInfo.pSignalSemaphores	 = semaphoresVk + signalSemaphoreSubmitInfoOffset;
+	}
     }
 
     VulkanUtilities::checkResult(vkQueueSubmit(m_queue, count, submitInfoVk, VK_NULL_HANDLE), "Failed to submit to Queue!");

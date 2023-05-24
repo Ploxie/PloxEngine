@@ -40,7 +40,7 @@ public:
     //void dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)											    = 0;
     //void dispatchIndirect(const Buffer* buffer, uint64_t offset)								 = 0;
     //void copyBuffer(const Buffer* srcBuffer, const Buffer* dstBuffer, uint32_t regionCount, const BufferCopy* regions)		 = 0;
-    //void copyImage(const Image* srcImage, const Image* dstImage, uint32_t regionCount, const ImageCopy* regions)		 = 0;
+    void CopyImage(const Image* srcImage, const Image* dstImage, uint32_t regionCount, const ImageCopy* regions) override;
     //void copyBufferToImage(const Buffer* srcBuffer, const Image* dstImage, uint32_t regionCount, const BufferImageCopy* regions) = 0;
     //void copyImageToBuffer(const Image* srcImage, const Buffer* dstBuffer, uint32_t regionCount, const BufferImageCopy* regions) = 0;
     //void updateBuffer(const Buffer* dstBuffer, uint64_t dstOffset, uint64_t dataSize, const void* data) = 0;

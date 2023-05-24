@@ -10,11 +10,13 @@ class VulkanDescriptorSetLayout : public DescriptorSetLayout
 {
 public:
     explicit VulkanDescriptorSetLayout(VkDevice device, uint32_t bindingCount, const VkDescriptorSetLayoutBinding* bindings, const VkDescriptorBindingFlags* bindingFlags);
+    ~VulkanDescriptorSetLayout() override;
+
     VulkanDescriptorSetLayout(VulkanDescriptorSetLayout&)		    = delete;
     VulkanDescriptorSetLayout(VulkanDescriptorSetLayout&&)		    = delete;
     VulkanDescriptorSetLayout& operator=(const VulkanDescriptorSetLayout&)  = delete;
     VulkanDescriptorSetLayout& operator=(const VulkanDescriptorSetLayout&&) = delete;
-    ~VulkanDescriptorSetLayout() override;
+
     void* GetNativeHandle() const override;
     const uint32_t* GetTypeCounts() const;
 
@@ -42,11 +44,13 @@ class VulkanDescriptorSetPool : public DescriptorSetPool
 {
 public:
     explicit VulkanDescriptorSetPool(VkDevice device, uint32_t maxSets, const VulkanDescriptorSetLayout* layout);
+    ~VulkanDescriptorSetPool() override;
+
     VulkanDescriptorSetPool(VulkanDescriptorSetPool&)			= delete;
     VulkanDescriptorSetPool(VulkanDescriptorSetPool&&)			= delete;
     VulkanDescriptorSetPool& operator=(const VulkanDescriptorSetPool&)	= delete;
     VulkanDescriptorSetPool& operator=(const VulkanDescriptorSetPool&&) = delete;
-    ~VulkanDescriptorSetPool() override;
+    
     void* GetNativeHandle() const override;
     void AllocateDescriptorSets(uint32_t count, DescriptorSet** sets) override;
     void Reset() override;

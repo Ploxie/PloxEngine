@@ -31,6 +31,12 @@ public:
     PresentMode GetPresentMode() const override;
 
 private:
+    void Create(uint32_t width, uint32_t height);
+    void Destroy();
+    void Resize(uint32_t width, uint32_t height, bool acquireImage);
+    uint32_t AcquireNextImageIndex(VkSemaphore semaphore);
+
+private:
     static constexpr uint32_t MAX_IMAGE_COUNT  = 8;
     static constexpr uint32_t BACKBUFFER_COUNT = 3;
 
@@ -42,22 +48,15 @@ private:
     VkSemaphore m_presentSemaphores[BACKBUFFER_COUNT]	= {};
     VkFence m_cmdBufferExecutedFences[BACKBUFFER_COUNT] = {};
 
-    Format m_imageFormat      = Format::UNDEFINED;
+    Format m_format	      = Format::UNDEFINED;
     Extent2D m_extent	      = {};
     PresentMode m_presentMode = PresentMode::IMMEDIATE;
     uint32_t m_imageCount     = 0;
-    Window* m_window	      = nullptr;
     Queue* m_presentQueue     = nullptr;
 
     VulkanImage* m_images[MAX_IMAGE_COUNT] = {};
-    uint32_t m_currentImageIndex	   = 0;
-    uint32_t m_currentSemaphoreIndex	   = 0;
-    uint32_t m_previousSemaphoreIndex	   = 0;
+    uint32_t m_currentImageIndex	   = -1;
     uint64_t m_frameIndex		   = 0;
-    StaticMemoryPool<VulkanImage, MAX_IMAGE_COUNT> m_imageMemoryPool;
 
-    void Create(uint32_t width, uint32_t height);
-    void Destroy();
-    void Resize(uint32_t width, uint32_t height, bool acquireImage);
-    uint32_t AcquireNextImageIndex();
+    StaticMemoryPool<VulkanImage, MAX_IMAGE_COUNT> m_imageMemoryPool;
 };

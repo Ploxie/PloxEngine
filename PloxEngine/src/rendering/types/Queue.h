@@ -21,16 +21,15 @@ struct SubmitInfo
     const uint64_t* SignalValues;
 };
 
+enum class QueueType
+{
+    GRAPHICS,
+    COMPUTE,
+    TRANSFER
+};
+
 class Queue
 {
-public:
-    enum class QueueType
-    {
-	GRAPHICS,
-	COMPUTE,
-	TRANSFER
-    };
-
 public:
     virtual ~Queue()						      = default;
     virtual void* GetNativeHandle() const			      = 0;

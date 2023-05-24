@@ -4,6 +4,7 @@
 
 #pragma once
 #include "rendering/types/Buffer.h"
+#include "rendering/types/BufferView.h"
 #include "vulkan/vulkan.h"
 
 class VulkanMemoryAllocator;
@@ -30,4 +31,25 @@ private:
     BufferCreateInfo m_description;
     VulkanMemoryAllocator* m_allocator;
     VulkanGraphicsAdapter* m_adapter;
+};
+
+class VulkanBufferView : public BufferView
+{
+public:
+    explicit VulkanBufferView(VkDevice device, const BufferViewCreateInfo& createInfo);
+    ~VulkanBufferView();
+
+    VulkanBufferView(VulkanBufferView&)			  = delete;
+    VulkanBufferView(VulkanBufferView&&)		  = delete;
+    VulkanBufferView& operator=(const VulkanBufferView&)  = delete;
+    VulkanBufferView& operator=(const VulkanBufferView&&) = delete;
+
+    void* GetNativeHandle() const override;
+    const Buffer* GetBuffer() const override;
+    const BufferViewCreateInfo& GetDescription() const override;
+
+private:
+    VkDevice m_device;
+    VkBufferView m_bufferView;
+    BufferViewCreateInfo m_description;
 };

@@ -157,6 +157,13 @@ bool VulkanMemoryPool::AllocateFromBlock(size_t blockIndex, VkDeviceSize size, V
 
     return false;
 }
+void VulkanMemoryPool::Free(VulkanAllocationInfo allocationInfo)
+{
+    m_allocators[allocationInfo.BlockIndex]->Free(allocationInfo.PoolData);
+
+    ASSERT(m_mapCount[allocationInfo.BlockIndex] >= allocationInfo.MapCount);
+    m_mapCount[allocationInfo.BlockIndex] -= allocationInfo.MapCount;
+}
 
 VulkanMemoryAllocator::VulkanMemoryAllocator()
     : m_allocationInfoPool(256)
@@ -237,6 +244,140 @@ VkResult VulkanMemoryAllocator::Allocate(const VulkanAllocationCreateInfo& alloc
     }
 
     return result;
+}
+
+void VulkanMemoryAllocator::Free(VulkanAllocationHandle allocationHandle)
+{
+    auto* allocationInfo = reinterpret_cast<VulkanAllocationInfo*>(allocationHandle);
+
+    // dedicated allocation
+    if(allocationInfo->PoolIndex == ~size_t(0))
+    {
+	if(allocationInfo->MapCount)
+	{
+	    vkUnmapMemory(m_device, allocationInfo->Memory);
+	}
+	vkFreeMemory(m_device, allocationInfo->Memory, nullptr);
+    }
+    // pool allocation
+    else
+    {
+	m_pools[allocationInfo->PoolIndex].Free(*allocationInfo);
+    }
+
+    memset(allocationInfo, 0, sizeof(*allocationInfo));
+    m_allocationInfoPool.Free(allocationInfo);
+}
+
+VkResult VulkanMemoryAllocator::CreateImage(const VulkanAllocationCreateInfo& allocationCreateInfo, const VkImageCreateInfo& imageCreateInfo, VkImage& image, VulkanAllocationHandle& allocationHandle)
+{
+    VkResult result = vkCreateImage(m_device, &imageCreateInfo, nullptr, &image);
+
+    if(result != VK_SUCCESS)
+    {
+	return result;
+    }
+
+    // get image memory requirements and dedicated memory requirements
+    VkMemoryDedicatedRequirements dedicatedRequirements { VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS_KHR };
+    VkMemoryRequirements2 memoryRequirements2 { VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2, &dedicatedRequirements };
+
+    VkImageMemoryRequirementsInfo2 imageRequirementsInfo { VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2 };
+    {
+	imageRequirementsInfo.image = image;
+    }
+
+    vkGetImageMemoryRequirements2(m_device, &imageRequirementsInfo, &memoryRequirements2);
+
+    // fill out dedicated alloc info
+    VkMemoryDedicatedAllocateInfo dedicatedAllocInfo { VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO_KHR };
+    {
+	dedicatedAllocInfo.image = image;
+    }
+
+    // allocate memory
+    result = Allocate(allocationCreateInfo, memoryRequirements2.memoryRequirements, allocationCreateInfo.DedicatedAllocation && dedicatedRequirements.prefersDedicatedAllocation ? &dedicatedAllocInfo : nullptr, allocationHandle);
+
+    if(result != VK_SUCCESS)
+    {
+	vkDestroyImage(m_device, image, nullptr);
+	return result;
+    }
+
+    VulkanAllocationInfo* allocationInfo = reinterpret_cast<VulkanAllocationInfo*>(allocationHandle);
+
+    result = vkBindImageMemory(m_device, image, allocationInfo->Memory, allocationInfo->Offset);
+
+    if(result != VK_SUCCESS)
+    {
+	vkDestroyImage(m_device, image, nullptr);
+	Free(allocationHandle);
+	return result;
+    }
+
+    return VK_SUCCESS;
+}
+
+VkResult VulkanMemoryAllocator::CreateBuffer(const VulkanAllocationCreateInfo& allocationCreateInfo, const VkBufferCreateInfo& bufferCreateInfo, VkBuffer& buffer, VulkanAllocationHandle& allocationHandle)
+{
+    assert(bufferCreateInfo.size);
+    VkResult result = vkCreateBuffer(m_device, &bufferCreateInfo, nullptr, &buffer);
+
+    if(result != VK_SUCCESS)
+    {
+	return result;
+    }
+
+    // get buffer memory requirements and dedicated memory requirements
+    VkMemoryDedicatedRequirements dedicatedRequirements { VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS_KHR };
+    VkMemoryRequirements2 memoryRequirements2 { VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2, &dedicatedRequirements };
+
+    VkBufferMemoryRequirementsInfo2 bufferRequirementsInfo { VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2 };
+    {
+	bufferRequirementsInfo.buffer = buffer;
+    }
+
+    vkGetBufferMemoryRequirements2(m_device, &bufferRequirementsInfo, &memoryRequirements2);
+
+    // fill out dedicated alloc info
+    VkMemoryDedicatedAllocateInfo dedicatedAllocInfo { VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO_KHR };
+    {
+	dedicatedAllocInfo.buffer = buffer;
+    }
+
+    // allocate memory
+    result = Allocate(allocationCreateInfo, memoryRequirements2.memoryRequirements, allocationCreateInfo.DedicatedAllocation && dedicatedRequirements.prefersDedicatedAllocation ? &dedicatedAllocInfo : nullptr, allocationHandle);
+
+    if(result != VK_SUCCESS)
+    {
+	vkDestroyBuffer(m_device, buffer, nullptr);
+	return result;
+    }
+
+    VulkanAllocationInfo* allocationInfo = reinterpret_cast<VulkanAllocationInfo*>(allocationHandle);
+
+    result = vkBindBufferMemory(m_device, buffer, allocationInfo->Memory, allocationInfo->Offset);
+
+    if(result != VK_SUCCESS)
+    {
+	vkDestroyBuffer(m_device, buffer, nullptr);
+	Free(allocationHandle);
+	return result;
+    }
+
+    return VK_SUCCESS;
+}
+
+void VulkanMemoryAllocator::DestroyImage(VkImage image, VulkanAllocationHandle allocationHandle)
+{
+    vkDestroyImage(m_device, image, nullptr);
+    Free(allocationHandle);
+}
+
+void VulkanMemoryAllocator::DestroyBuffer(VkBuffer buffer, VulkanAllocationHandle allocationHandle)
+{
+    vkDestroyBuffer(m_device, buffer, nullptr);
+    Free(allocationHandle);
 }
 
 VkResult VulkanMemoryAllocator::MapMemory(VulkanAllocationHandle allocationHandle, void** data)

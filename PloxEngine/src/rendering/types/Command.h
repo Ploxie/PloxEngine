@@ -78,7 +78,7 @@ public:
     //virtual void dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)											    = 0;
     //virtual void dispatchIndirect(const Buffer* buffer, uint64_t offset)								 = 0;
     //virtual void copyBuffer(const Buffer* srcBuffer, const Buffer* dstBuffer, uint32_t regionCount, const BufferCopy* regions)		 = 0;
-    //virtual void copyImage(const Image* srcImage, const Image* dstImage, uint32_t regionCount, const ImageCopy* regions)		 = 0;
+    virtual void CopyImage(const Image* srcImage, const Image* dstImage, uint32_t regionCount, const ImageCopy* regions) = 0;
     //virtual void copyBufferToImage(const Buffer* srcBuffer, const Image* dstImage, uint32_t regionCount, const BufferImageCopy* regions) = 0;
     //virtual void copyImageToBuffer(const Image* srcImage, const Buffer* dstBuffer, uint32_t regionCount, const BufferImageCopy* regions) = 0;
     //virtual void updateBuffer(const Buffer* dstBuffer, uint64_t dstOffset, uint64_t dataSize, const void* data) = 0;

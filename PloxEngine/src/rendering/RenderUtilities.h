@@ -12,6 +12,8 @@ namespace RenderUtilities
     bool IsDepthFormat(Format format);
     bool IsStencilFormat(Format format);
 
+    uint32_t GetUsageFlags(ResourceState state, bool isImage);
+
     Barrier ImageBarrier(const Image* image, PipelineStageFlags stagesBefore, PipelineStageFlags stagesAfter, ResourceState stateBefore, ResourceState stateAfter, const ImageSubresourceRange& subresourceRange = { 0, 1, 0, 1 });
 } // namespace RenderUtilities
 

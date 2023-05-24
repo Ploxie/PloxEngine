@@ -3,8 +3,6 @@
 struct VSOutput
 {
 	float4 position : SV_Position;
-	float3 worldSpacePos : WORLD_SPACE_POS;
-	float2 gridPos : GRID_POSITION;
 };
 
 struct Constants
@@ -19,7 +17,7 @@ struct Constants
 	float gridSize;
 };
 
-ConstantBuffer<Constants> g_Constants : REGISTER_CBV(0, 0, 0);
+//ConstantBuffer<Constants> g_Constants : REGISTER_CBV(0, 0, 0);
 
 VSOutput main(uint vertexID : SV_VertexID)
 {
@@ -27,19 +25,20 @@ VSOutput main(uint vertexID : SV_VertexID)
 
 	float2 positions[6] =
 	{
-		float2(0.0, 1.0),
 		float2(0.0, 0.0),
+		float2(1.0, 0.0),
 		float2(1.0, 1.0),
-		float2(1.0, 1.0),
+		float2(0.0, 1.0),
 		float2(0.0, 0.0),
 		float2(1.0, 0.0),
 	};
 
 	VSOutput output = (VSOutput)0;
-	output.gridPos = positions[positionIndex] * g_Constants.gridSize;
-	float2 objectSpacePos = output.gridPos - g_Constants.gridSize * 0.5f;
-	output.worldSpacePos = mul(g_Constants.modelMatrix, float4(objectSpacePos.x, 0.0f, objectSpacePos.y, 1.0f)).xyz;
-	output.position = mul(g_Constants.viewProjectionMatrix, float4(output.worldSpacePos, 1.0f));
+	//output.gridPos = positions[positionIndex] * 200.0f;
+	//float2 objectSpacePos = output.gridPos - 200.0f * 0.5f;
+	//output.worldSpacePos = mul(g_Constants.modelMatrix, float4(objectSpacePos.x, 0.0f, objectSpacePos.y, 1.0f)).xyz;
+	//output.position = mul(g_Constants.viewProjectionMatrix, float4(output.worldSpacePos, 1.0f));
+	output.position = float4(positions[positionIndex] * 200.0f, 0.5f, 0.5f);
 
 	return output;
 }

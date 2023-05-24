@@ -3,8 +3,6 @@
 struct PSInput
 {
 	float4 position : SV_Position;
-	float3 worldSpacePos : WORLD_SPACE_POS;
-	float2 gridPos : GRID_POSITION;
 };
 
 struct PSOutput
@@ -24,10 +22,13 @@ struct Constants
 	float gridSize;
 };
 
-ConstantBuffer<Constants> g_Constants : REGISTER_CBV(0, 0, 0);
+//ConstantBuffer<Constants> g_Constants : REGISTER_CBV(0, 0, 0);
 
 float4 main(PSInput input) : SV_Target0
 {
+    	return float4(1.0f, 0.0f, 0.0f, 1.0f);
+
+	/*
 	float2 uv = input.gridPos;
 
 	// find screen space derivatives of grid space
@@ -68,4 +69,5 @@ float4 main(PSInput input) : SV_Target0
 	c.a *= (lod2A > 0.0f ? lod2A : lod1A > 0.0f ? lod1A : (lod0A * (1.0f - lodFade))) * opacity;
 
 	return c;
+	 */
 }

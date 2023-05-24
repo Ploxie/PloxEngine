@@ -140,6 +140,73 @@ bool TLSFAllocator::Allocate(uint32_t size, uint32_t alignment, uint32_t& chunkO
     return true;
 }
 
+void TLSFAllocator::Free(void* backingChunk)
+{
+    Chunk* chunk = reinterpret_cast<Chunk*>(backingChunk);
+    ASSERT(!chunk->Next);
+    ASSERT(!chunk->Previous);
+
+    m_freeSize += chunk->Size;
+    m_usedSize -= chunk->UsedSize;
+    m_requiredDebugChunkCount -= chunk->UsedOffset > chunk->Offset ? 1 : 0;
+    m_requiredDebugChunkCount -= (chunk->Offset + chunk->Size) > (chunk->UsedOffset + chunk->UsedSize) ? 1 : 0;
+
+    // is next physical chunk also free? -> merge
+    {
+	Chunk* nextPhysical = chunk->NextPhysical;
+	if(nextPhysical && nextPhysical->UsedSize == 0)
+	{
+	    // remove next physical chunk from free list
+	    RemoveChunkFromFreeList(nextPhysical);
+
+	    // merge spans
+	    chunk->Size += nextPhysical->Size;
+	    chunk->NextPhysical = nextPhysical->NextPhysical;
+	    if(nextPhysical->NextPhysical)
+	    {
+		nextPhysical->NextPhysical->PreviousPhysical = chunk;
+	    }
+
+	    m_chunkPool.Free(nextPhysical);
+	    --m_requiredDebugChunkCount;
+	}
+    }
+
+    // is previous physical chunk also free? -> merge
+    {
+	Chunk* previousPhysical = chunk->PreviousPhysical;
+	if(previousPhysical && previousPhysical->UsedSize == 0)
+	{
+	    // remove previous physical chunk from free list
+	    RemoveChunkFromFreeList(previousPhysical);
+
+	    // merge spans
+	    previousPhysical->Size += chunk->Size;
+	    previousPhysical->NextPhysical = chunk->NextPhysical;
+	    if(chunk->NextPhysical)
+	    {
+		chunk->NextPhysical->PreviousPhysical = previousPhysical;
+	    }
+
+	    m_chunkPool.Free(chunk);
+
+	    chunk = previousPhysical;
+	    --m_requiredDebugChunkCount;
+	}
+    }
+
+    // add chunk to free list
+    {
+	AddChunkToFreeList(chunk);
+    }
+
+    --m_allocationCount;
+
+#ifdef _DEBUG
+    CheckIntegrity();
+#endif // _DEBUG
+}
+
 void TLSFAllocator::GetFreeUsedWastedSizes(uint32_t& free, uint32_t& used, uint32_t& wasted) const
 {
     free   = m_freeSize;
