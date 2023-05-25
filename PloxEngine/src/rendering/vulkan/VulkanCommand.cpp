@@ -8,6 +8,7 @@
 #include "rendering/types/Buffer.h"
 #include "utility/memory/DefaultAllocator.h"
 #include "volk.h"
+#include "VulkanBuffer.h"
 #include "VulkanGraphicsAdapter.h"
 #include "VulkanGraphicsPipeline.h"
 #include "VulkanUtilities.h"
@@ -272,9 +273,36 @@ void VulkanCommand::BindDescriptorSets(const GraphicsPipeline* pipeline, uint32_
     vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, firstSet, count, descriptorSets, offsetCount, offsets);
 }
 
+void VulkanCommand::BindIndexBuffer(const Buffer* buffer, uint64_t offset, IndexType indexType)
+{
+    const auto* buf = dynamic_cast<const VulkanBuffer*>(buffer);
+    ASSERT(buf);
+
+    vkCmdBindIndexBuffer(m_commandBuffer, (VkBuffer) buf->GetNativeHandle(), offset, VulkanUtilities::Translate(indexType));
+}
+
+void VulkanCommand::BindVertexBuffers(uint32_t firstBinding, uint32_t count, const Buffer* const* buffers, uint64_t* offsets)
+{
+    LinearAllocatorFrame allocatorFrame(&m_allocator);
+
+    VkBuffer* buffersVk = allocatorFrame.AllocateArray<VkBuffer>(count);
+
+    for(size_t i = 0; i < count; ++i)
+    {
+	buffersVk[i] = (VkBuffer) buffers[i]->GetNativeHandle();
+    }
+
+    vkCmdBindVertexBuffers(m_commandBuffer, firstBinding, count, buffersVk, offsets);
+}
+
 void VulkanCommand::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
 {
     vkCmdDraw(m_commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+}
+
+void VulkanCommand::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
+{
+    vkCmdDrawIndexed(m_commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
 
 void VulkanCommand::CopyImage(const Image* srcImage, const Image* dstImage, uint32_t regionCount, const ImageCopy* regions)
@@ -467,8 +495,9 @@ void VulkanCommand::BeginRenderPass(uint32_t colorAttachmentCount, ColorAttachme
 	    depthAttachment.storeOp		    = VulkanUtilities::Translate(depthStencilAttachment->StoreOp);
 	    depthAttachment.clearValue.depthStencil = *reinterpret_cast<const VkClearDepthStencilValue*>(&depthStencilAttachment->ClearValue);
 
-	    stencilAttachment	      = depthAttachment;
-	    stencilAttachment.loadOp  = VulkanUtilities::Translate(depthStencilAttachment->StencilLoadOp);
+	    stencilAttachment		= depthAttachment;
+	    stencilAttachment.imageView = RenderUtilities::IsStencilFormat(depthStencilAttachment->ImageView->GetDescription().Format) ? depthAttachment.imageView : nullptr;
+	    stencilAttachment.loadOp	= VulkanUtilities::Translate(depthStencilAttachment->StencilLoadOp);
 	    stencilAttachment.storeOp = VulkanUtilities::Translate(depthStencilAttachment->StencilStoreOp);
 	}
 

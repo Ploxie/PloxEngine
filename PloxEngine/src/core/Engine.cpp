@@ -62,7 +62,7 @@ void Engine::Initialize(int argc, char* argv[], GameLogic* gameLogic)
     Logger::Initialize();
     Platform::Initialize("PloxieApplication");
 
-    m_window = Platform::CreatePlatformWindow("TestWindow", -1, -1, 800, 600);
+    m_window = Platform::CreatePlatformWindow("TestWindow", -1, -1, 1024, 768);
     m_renderer.Initialize(Platform::GetWindow(m_window), GraphicsBackendType::VULKAN);
 
     m_gameLogic->Initialize(this);

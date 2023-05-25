@@ -7,6 +7,8 @@
 #include "rendering/rendergraph/RenderGraph.h"
 #include "types/Semaphore.h"
 #include "types/Swapchain.h"
+#include <glm/gtc/quaternion.hpp>
+#include <glm/vec3.hpp>
 
 class Window;
 
@@ -14,7 +16,7 @@ class CommandPool;
 class Command;
 class RenderGraph;
 class ResourceViewRegistry;
-class GridPass;
+class RenderView;
 
 class Renderer
 {
@@ -40,16 +42,14 @@ private:
 
     RenderGraph* m_renderGraph;
     ResourceViewRegistry* m_viewRegistry;
+    RenderView* m_renderView;
 
-    Image* m_resultImage;
-    ResourceStateData m_resultImageState[1]		   = {};
-    Buffer* m_mappableConstantBuffers[2]		   = {};
     DescriptorSetLayout* m_offsetBufferDescriptorSetLayout = nullptr;
     DescriptorSetPool* m_offsetBufferDescriptorSetPool	   = nullptr;
     DescriptorSet* m_offsetBufferDescriptorSets[2]	   = {};
-    GridPass* m_gridPass;
-    CommandPool* m_commandPool;
-    Command* m_command;
-    DescriptorSet* m_descriptorSet;
-    GraphicsPipeline* m_pipeline;
+    Buffer* m_mappableConstantBuffers[2]		   = {};
+
+    //CAMERA
+    glm::quat m_rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+    glm::vec3 m_position = { 0, 0, 2.0f };
 };

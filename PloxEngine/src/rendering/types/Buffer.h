@@ -35,6 +35,12 @@ enum class BufferUsageFlags
 };
 DEF_ENUM_FLAG_OPERATORS(BufferUsageFlags)
 
+enum class IndexType
+{
+    UINT16 = 0,
+    UINT32 = 1,
+};
+
 enum class BufferCreateFlags
 {
 

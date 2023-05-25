@@ -1,4 +1,4 @@
-AlignAfterOpenBracket: Align
+AlignAfterOpenBracket: false
 AlignConsecutiveMacros: Consecutive
 AlignConsecutiveAssignments: Consecutive
 AlignConsecutiveDeclarations: None
@@ -12,7 +12,7 @@ AllowShortBlocksOnASingleLine: Always
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: InlineOnly
 AllowShortIfStatementsOnASingleLine: WithoutElse
-AllowShortLambdasOnASingleLine: Inline
+AllowShortLambdasOnASingleLine: None
 AllowShortLoopsOnASingleLine: true
 AlwaysBreakAfterReturnType: None
 AlwaysBreakTemplateDeclarations: 'Yes'
@@ -60,3 +60,6 @@ SpacesInSquareBrackets: false
 UseTab: Always
 IndentWidth: 4
 AccessModifierOffset: -4
+LambdaBodyIndentation: OuterScope
+
+ContinuationIndentWidth: 0

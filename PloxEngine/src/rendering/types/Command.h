@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "Buffer.h"
 #include "DescriptorSet.h"
 #include "GraphicsPipeline.h"
 
@@ -69,10 +70,10 @@ public:
     virtual void SetStencilReference(StencilFaceFlags faceMask, uint32_t reference)												    = 0;
     virtual void BindDescriptorSets(const GraphicsPipeline* pipeline, uint32_t firstSet, uint32_t count, const DescriptorSet* const* sets, uint32_t offsetCount, uint32_t* offsets) = 0;
     //virtual void bindDescriptorSets(const ComputePipeline* pipeline, uint32_t firstSet, uint32_t count, const DescriptorSet* const* sets, uint32_t offsetCount, uint32_t* offsets)  = 0;
-    //virtual void bindIndexBuffer(const Buffer* buffer, uint64_t offset, IndexType indexType)											    = 0;
-    //virtual void bindVertexBuffers(uint32_t firstBinding, uint32_t count, const Buffer* const* buffers, uint64_t* offsets)							    = 0;
-    virtual void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) = 0;
-    //virtual void drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)					    = 0;
+    virtual void BindIndexBuffer(const Buffer* buffer, uint64_t offset, IndexType indexType)						     = 0;
+    virtual void BindVertexBuffers(uint32_t firstBinding, uint32_t count, const Buffer* const* buffers, uint64_t* offsets)		     = 0;
+    virtual void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)			     = 0;
+    virtual void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance) = 0;
     //virtual void drawIndirect(const Buffer* buffer, uint64_t offset, uint32_t drawCount, uint32_t stride)									    = 0;
     //virtual void drawIndexedIndirect(const Buffer* buffer, uint64_t offset, uint32_t drawCount, uint32_t stride)								    = 0;
     //virtual void dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)											    = 0;

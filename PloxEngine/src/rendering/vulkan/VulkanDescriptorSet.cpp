@@ -224,6 +224,7 @@ void VulkanDescriptorSet::Update(uint32_t count, const DescriptorSetUpdate* upda
 		    break;
 	    }
 	}
+	vkUpdateDescriptorSets(m_device, countVk, writesVk, 0, nullptr);
     }
 }
 

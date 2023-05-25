@@ -3,6 +3,7 @@
 //
 #include "VulkanGraphicsPipeline.h"
 #include "platform/Platform.h"
+#include "rendering/RenderUtilities.h"
 #include "volk.h"
 #include "VulkanDescriptorSet.h"
 #include "VulkanGraphicsAdapter.h"
@@ -69,7 +70,7 @@ VulkanGraphicsPipeline::VulkanGraphicsPipeline(VulkanGraphicsAdapter* adapter, c
 	pipelineRenderingCreateInfo.colorAttachmentCount    = createInfo.AttachmentFormats.ColorAttachmentCount;
 	pipelineRenderingCreateInfo.pColorAttachmentFormats = colorAttachmentFormats;
 	pipelineRenderingCreateInfo.depthAttachmentFormat   = VulkanUtilities::Translate(createInfo.AttachmentFormats.DepthStencilFormat);
-	pipelineRenderingCreateInfo.stencilAttachmentFormat = pipelineRenderingCreateInfo.stencilAttachmentFormat;
+	pipelineRenderingCreateInfo.stencilAttachmentFormat = RenderUtilities::IsStencilFormat(createInfo.AttachmentFormats.DepthStencilFormat) ? pipelineRenderingCreateInfo.depthAttachmentFormat : VK_FORMAT_UNDEFINED;
     }
     else
     {

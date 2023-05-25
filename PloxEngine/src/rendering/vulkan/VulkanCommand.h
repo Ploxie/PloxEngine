@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "rendering/types/Buffer.h"
 #include "rendering/types/Command.h"
 #include "utility/memory/LinearAllocator.h"
 #include "vulkan/vulkan.h"
@@ -31,10 +32,10 @@ public:
     void SetStencilReference(StencilFaceFlags faceMask, uint32_t reference) override;
     void BindDescriptorSets(const GraphicsPipeline* pipeline, uint32_t firstSet, uint32_t count, const DescriptorSet* const* sets, uint32_t offsetCount, uint32_t* offsets) override;
     //void bindDescriptorSets(const ComputePipeline* pipeline, uint32_t firstSet, uint32_t count, const DescriptorSet* const* sets, uint32_t offsetCount, uint32_t* offsets)  = 0;
-    //void bindIndexBuffer(const Buffer* buffer, uint64_t offset, IndexType indexType)											    = 0;
-    //void bindVertexBuffers(uint32_t firstBinding, uint32_t count, const Buffer* const* buffers, uint64_t* offsets)							    = 0;
+    void BindIndexBuffer(const Buffer* buffer, uint64_t offset, IndexType indexType) override;
+    void BindVertexBuffers(uint32_t firstBinding, uint32_t count, const Buffer* const* buffers, uint64_t* offsets) override;
     void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) override;
-    //void drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)					    = 0;
+    void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance) override;
     //void drawIndirect(const Buffer* buffer, uint64_t offset, uint32_t drawCount, uint32_t stride)									    = 0;
     //void drawIndexedIndirect(const Buffer* buffer, uint64_t offset, uint32_t drawCount, uint32_t stride)								    = 0;
     //void dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)											    = 0;

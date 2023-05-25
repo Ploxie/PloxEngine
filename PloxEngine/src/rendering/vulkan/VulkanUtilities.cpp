@@ -1597,3 +1597,18 @@ VkDescriptorBindingFlags VulkanUtilities::Translate(DescriptorBindingFlags flags
 
     return result;
 }
+
+VkIndexType VulkanUtilities::Translate(IndexType indexType)
+{
+    switch(indexType)
+    {
+	case IndexType::UINT16:
+	    return VK_INDEX_TYPE_UINT16;
+	case IndexType::UINT32:
+	    return VK_INDEX_TYPE_UINT32;
+	default:
+	    assert(false);
+	    break;
+    }
+    return VkIndexType();
+}

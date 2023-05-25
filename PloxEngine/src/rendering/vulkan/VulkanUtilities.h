@@ -48,5 +48,6 @@ namespace VulkanUtilities
     VkPipelineStageFlags Translate(PipelineStageFlags flags);
     VkImageUsageFlags Translate(ImageUsageFlags flags);
     VkDescriptorBindingFlags Translate(DescriptorBindingFlags flags);
+    VkIndexType Translate(IndexType indexType);
 
 } // namespace VulkanUtilities
